@@ -202,7 +202,7 @@ createdAt,updatedAt,doc}`, `doc` keys = `IDEA_FIELDS`/`ideaKeys()`, a hoisted fu
 `normalizeWorkspace`, `seedWorkspace` and `TREE` (`ideas` table, `user_version` 2 migration). The chat is the fourth co-writing kind,
 `idea` (`ui.ideaChat`, memory `ui.ideaChats`, `/api/chats/idea/<id>`, swept when the idea is gone), modal kind `ideas` (`openIdea`),
 runs in the `incubadora` project folder with a null projectId. Its header has a model/effort selector (`ideaTuneHTML`, `ideaTune`) saved on
-CATALYST; the idea chat uses `ideaRuntime()` (global model/effort ignored), other runs keep the global override. Autosave `ideaDirty`/`ideaPersist`; `.md` export `ideaExport`.
+CATALYST; the idea chat uses `ideaRuntime()` (global model/effort ignored), other runs keep the global override. Idea runs also get `IDEA_WEB` (only `WebSearch`/`WebFetch`, pre-approved, 300 s) on top of `CHAT_RUN`; the other chats stay tool-less. Autosave `ideaDirty`/`ideaPersist`; `.md` export `ideaExport`.
 **Criar operação** (`ideaToOperation`) goes through the `op-new` wizard carrying `ideaId`; `createOperation` then calls
 `ideaApplyToProject` (briefing, vision, scopeIn/Out, glossary) and sets `idea.projectId`. The roadmap is high level (MVP→V1→V2);
 sprints and features stay with the PRD agents and the commander.
