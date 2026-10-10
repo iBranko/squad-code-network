@@ -196,6 +196,16 @@ report (framed as "[Subagent hand-back] ... The report follows:" with indented l
   form's current values; "Salvar no projeto" (`#docForm` → `saveProjectDoc`) writes back into `#projectForm`, calls `saveProject`
   (a new operation only fills the form: "Aplicar ao formulário") and opens and highlights every page place.
 
+**Incubadora de ideias** (Painel, bridge only, no demo): CATALYST (`AGENT_PRESETS.idea`, role `po`, created lazily by `ensureIdeaAgent`
+with id `agent-catalyst`, never in a squad) brainstorms a raw idea into a product document. `state.ideas[]` (max 30, `{id,name,projectId,
+createdAt,updatedAt,doc}`, `doc` keys = `IDEA_FIELDS`/`ideaKeys()`, a hoisted function because `normalizeWorkspace` runs first) is in
+`normalizeWorkspace`, `seedWorkspace` and `TREE` (`ideas` table, `user_version` 2 migration). The chat is the fourth co-writing kind,
+`idea` (`ui.ideaChat`, memory `ui.ideaChats`, `/api/chats/idea/<id>`, swept when the idea is gone), modal kind `ideas` (`openIdea`),
+runs in the `incubadora` project folder with a null projectId. Autosave `ideaDirty`/`ideaPersist`; `.md` export `ideaExport`.
+**Criar operação** (`ideaToOperation`) goes through the `op-new` wizard carrying `ideaId`; `createOperation` then calls
+`ideaApplyToProject` (briefing, vision, scopeIn/Out, glossary) and sets `idea.projectId`. The roadmap is high level (MVP→V1→V2);
+sprints and features stay with the PRD agents and the commander.
+
 **Domain model.**
 - Positions (`a.hex`, `a.desk`) are unique per squad, not per workspace: `takenHexes`/`takenDesks` only look at `squad()`
   (the active squad), the map gets no other agents, loading only fixes invalid positions, and `render()` runs

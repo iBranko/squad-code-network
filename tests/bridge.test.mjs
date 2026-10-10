@@ -519,3 +519,33 @@ test('chats are saved per kind, capped and swept when their feature is gone', as
   chats = pageTag(await page(), 'squad-memory').chats;
   assert.equal(chats.agent.a1, undefined);
 });
+
+test('ideas sync with the workspace, keep their chat and a version 1 database gains the table', async () => {
+  const dir = tmp('squad-ideas-'); extraDirs.push(dir);
+  let b = await startBridge(dir);
+  const ws = { version: 2, agents: [], squads: [], projects: [{ id: 'p1', name: 'Um' }], ideas: [{ id: 'i1', name: 'Compras', doc: { problema: 'dor' } }, { id: 'i2', name: 'Outra', doc: {} }] };
+  assert.equal((await b.api('/api/setup', { method: 'POST', body: JSON.stringify(ws) })).status, 201);
+  const chat = (id, n = 1) => b.api(`/api/chats/idea/${id}`, { method: 'PUT', body: JSON.stringify({ projectId: null, data: { seq: n, greeting: 'oi', messages: [{ id: 'm1', at: Date.now(), role: 'user', text: 'ideia' }] } }) });
+  assert.equal((await chat('i1')).status, 200);
+  assert.equal((await chat('i2')).status, 200);
+  assert.equal((await chat('gone')).status, 200);
+  let html = await page(b.base);
+  const tag = id => pageTag(html, id);
+  assert.deepEqual(tag('squad-disk').workspace.ideas.map(i => i.id), ['i1', 'i2']);
+  assert.equal(tag('squad-disk').workspace.ideas[0].doc.problema, 'dor');
+  assert.equal(tag('squad-memory').chats.idea.i1.messages.length, 1);
+  assert.equal(tag('squad-memory').chats.idea.gone, undefined); // no idea 'gone' in the workspace
+  await b.stop();
+
+  const db = new Database(path.join(dir, 'squad.db'));
+  db.exec('DROP TABLE ideas');
+  db.pragma('user_version = 1');
+  db.close();
+  b = await startBridge(dir);
+  html = await page(b.base);
+  const rev = tag('squad-disk').rev;
+  assert.equal((await b.api(`/api/workspace?base=${rev}`, { method: 'PUT', body: JSON.stringify(ws) })).status, 200);
+  html = await page(b.base);
+  assert.equal(tag('squad-disk').workspace.ideas.length, 2);
+  await b.stop();
+});

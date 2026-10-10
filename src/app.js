@@ -119,7 +119,7 @@ const TEMPLATE_AVATARS={
  FEATHER:'avatar-butterfly',QUILL:'avatar-messenger',PEBBLE:'avatar-stone',KEEL:'avatar-hobbs',GATEKEEPER:'avatar-havan',SURGE:'avatar-shocker',ORBIT:'avatar-mistral',
  LEDGER:'avatar-crafter',KEYSTONE:'avatar-trautman',SKYLINE:'avatar-mark-one',BASTION:'avatar-blader',
  DATABIRD:'avatar-databird',CONDUIT:'avatar-alpha-ghost',TORRENT:'avatar-queen-bee',INSIGHT:'avatar-dragon',
- PRISM:'avatar-butterfly',CANVAS:'avatar-queen-bee',MOSAIC:'avatar-shafter',SCRIBE:'commander',LEXICON:'avatar-codemaker',GUIDE:'avatar-nomade'
+ PRISM:'avatar-butterfly',CANVAS:'avatar-queen-bee',MOSAIC:'avatar-shafter',SCRIBE:'commander',LEXICON:'avatar-codemaker',GUIDE:'avatar-nomade',CATALYST:'avatar-codemaker'
 };
 // Earlier preset photos: agents still showing one of them follow the current identity photo.
 const TEMPLATE_AVATARS_V1={ZERO:['avatar-greyman'],'ABELHA-RAINHA':['avatar-mother-protocol','avatar-queen-bee'],VAULT:['avatar-databird'],ECHO:['avatar-phasma'],ATOMIC:['avatar-delta']};
@@ -396,7 +396,7 @@ function seedWorkspace(){
   glossary:'SKU: código único que identifica um produto e sua variação\nCarrinho: itens escolhidos pelo cliente antes do checkout, guardados entre sessões\nCheckout: fechamento do pedido, com endereço, frete e pagamento\nSandbox: ambiente de pagamento de teste, sem cobrança real\nPedido: compra confirmada, com itens, valores e status',
   architecture:'Aplicação web com frontend SPA e uma API REST. A API concentra as regras de negócio: preços, estoque e totais do pedido são sempre recalculados no servidor.\n\nDados em banco relacional (usuários, produtos, estoque, carrinhos e pedidos). O pagamento passa por um provedor em modo sandbox via integração server-side. O painel administrativo usa a mesma API, com autorização por papel.',
   adrs:[{id:'adr-atlas-1',title:'Recalcular valores do pedido no servidor',status:'Aceito',date:nowISO().slice(0,10),content:'## Contexto\nO cliente pode alterar preços e quantidades enviados pelo navegador.\n\n## Decisão\nA API recalcula preços, descontos, frete e total a partir do catálogo e do estoque em toda criação e atualização de pedido. Valores vindos do cliente servem só para exibição.\n\n## Consequências\nTotais sempre confiáveis e validação de estoque num só lugar, ao custo de uma consulta a mais por operação do carrinho.'}],
-  commanderId:'agent-commander',agentIds:agents.map(a=>a.id),sprints,features,logs:[{id:id('event'),at:nowISO(),agentId:null,type:'system',message:'Workspace de exemplo carregado. Nenhum processo Claude conectado.',simulated:true}],handoffs:[],createdAt:nowISO()}],projectId:'project-atlas',settings:{...DEFAULT_SETTINGS,runtime:{...DEFAULT_RUNTIME}}};
+  commanderId:'agent-commander',agentIds:agents.map(a=>a.id),sprints,features,logs:[{id:id('event'),at:nowISO(),agentId:null,type:'system',message:'Workspace de exemplo carregado. Nenhum processo Claude conectado.',simulated:true}],handoffs:[],createdAt:nowISO()}],projectId:'project-atlas',ideas:[],settings:{...DEFAULT_SETTINGS,runtime:{...DEFAULT_RUNTIME}}};
 }
 function hasCycle(features){const map=new Map(features.map(f=>[f.id,f.dependencies])),active=new Set(),visited=new Set();const visit=id=>{if(active.has(id))return true;if(visited.has(id))return false;active.add(id);for(const next of map.get(id)||[])if(visit(next))return true;active.delete(id);visited.add(id);return false;};return features.some(f=>visit(f.id));}
 // Backup normalization: explicit fields, bounded sizes, safe identifiers, and image data URLs only.
@@ -452,7 +452,8 @@ function normalizeWorkspace(raw){
  const projectId=projects.some(p=>p.id===raw.projectId)?raw.projectId:projects[0].id;
  const rawLib=raw.conventionLibrary&&typeof raw.conventionLibrary==='object'?raw.conventionLibrary:{};
  const conventionLibrary={templates:arr(rawLib.templates,60).filter(t=>t&&typeof t==='object'&&typeof t.content==='string').map(t=>({id:ref(t.id)||id('ctpl'),name:str(t.name,60).trim()||'Template',family:Object.hasOwn(CONVENTION_FAMILIES,t.family)?t.family:'general',content:str(t.content,20000),createdAt:date(t.createdAt)})),subsets:arr(rawLib.subsets,60).filter(t=>t&&typeof t==='object'&&typeof t.content==='string').map(t=>({id:ref(t.id)||id('csub'),name:str(t.name,60).trim()||'Subset',content:str(t.content,8000),createdAt:date(t.createdAt)}))};
- return{version:2,agents,conventionLibrary,squads,projects,projectId,settings:{motion:raw.settings?.motion!==false,stepMs:[600,1000,1800,3200].includes(raw.settings?.stepMs)?raw.settings.stepMs:1800,squadView:raw.settings?.squadView==='office'?'office':'city',cityShape:raw.settings?.cityShape==='planet'?'planet':'flat',mapQuality:raw.settings?.mapQuality==='low'?'low':'high',squadNodes:raw.settings?.squadNodes==='photo'?'photo':'icon',catalogVersion:Number.isInteger(raw.settings?.catalogVersion)&&raw.settings.catalogVersion>0?raw.settings.catalogVersion:1,teamsChat:Number.isInteger(raw.settings?.teamsChat)&&raw.settings.teamsChat>=280&&raw.settings.teamsChat<=1600?raw.settings.teamsChat:0,opsChat:Number.isInteger(raw.settings?.opsChat)&&raw.settings.opsChat>=280&&raw.settings.opsChat<=1600?raw.settings.opsChat:0,runtime:normalizeRuntime(raw.settings?.runtime)}};
+ const ideas=arr(raw.ideas,30).filter(x=>x&&typeof x==='object').map(x=>({id:validId(x.id),name:str(x.name,80).trim()||'Nova ideia',projectId:ref(x.projectId),createdAt:date(x.createdAt),updatedAt:date(x.updatedAt),doc:Object.fromEntries(ideaKeys().map(k=>[k,str(x.doc?.[k],12000)]))}));
+ return{version:2,agents,conventionLibrary,squads,projects,projectId,ideas,settings:{motion:raw.settings?.motion!==false,stepMs:[600,1000,1800,3200].includes(raw.settings?.stepMs)?raw.settings.stepMs:1800,squadView:raw.settings?.squadView==='office'?'office':'city',cityShape:raw.settings?.cityShape==='planet'?'planet':'flat',mapQuality:raw.settings?.mapQuality==='low'?'low':'high',squadNodes:raw.settings?.squadNodes==='photo'?'photo':'icon',catalogVersion:Number.isInteger(raw.settings?.catalogVersion)&&raw.settings.catalogVersion>0?raw.settings.catalogVersion:1,teamsChat:Number.isInteger(raw.settings?.teamsChat)&&raw.settings.teamsChat>=280&&raw.settings.teamsChat<=1600?raw.settings.teamsChat:0,opsChat:Number.isInteger(raw.settings?.opsChat)&&raw.settings.opsChat>=280&&raw.settings.opsChat<=1600?raw.settings.opsChat:0,runtime:normalizeRuntime(raw.settings?.runtime)}};
 }
 /* Saved copy. Served by the bridge, the page gets the workspace from its SQLite database (data/squad.db) in #squad-disk and every
    save() also goes there (diskFlush,
@@ -495,7 +496,7 @@ state.agents.forEach(a=>{const k=templateAvatarKey(a);if(k&&a.image&&[TEMPLATE_A
 // Preset icons changed (ABELHA-RAINHA -> bee, ZERO -> slashed zero); agents still using the previous preset icon follow.
 [['ABELHA-RAINHA','queen','bee'],['ZERO','radio','zero'],['VANILLA','html','js'],['PIPELINE','flow','git'],['SCALPEL','check','flask'],['WARDEN','shield','bug']].forEach(([name,from,to])=>state.agents.forEach(a=>{if(a.name===name&&a.icon===from)a.icon=to;}));
 const ui={dismissedId:null,squadSel:null,squadDraft:null,squadPick:null,squadSlotPending:null,squadFlash:null,opsNew:null,opsFeature:null,opsFeatureDraft:null,opsPlan:null,opsFeatView:'list',opsLast:{scope:'fullstack',priority:'P1',sprintId:''},sprintOpen:{},selectedId:state.projects.find(p=>p.id===state.projectId)?.commanderId||state.agents[0]?.id,view:'home',lastView:'home',focus:false,modal:null,returnFocus:null,draft:null,pendingPlan:null,confirm:null,featureQuery:'',logFilter:'all',bridge:{online:false,checked:false,version:null,error:null},opsChat:{open:false,min:false,unread:0,pid:''},consoles:[],consoleId:null,settingsTab:'workspace',settingsScope:'user',settingsFile:null};
-if(bootMemory?.chats){ui.featureChats=bootMemory.chats.feature||{};ui.agentChats=bootMemory.chats.agent||{};ui.docChats=bootMemory.chats.doc||{};}
+if(bootMemory?.chats){ui.featureChats=bootMemory.chats.feature||{};ui.agentChats=bootMemory.chats.agent||{};ui.ideaChats=bootMemory.chats.idea||{};ui.docChats=bootMemory.chats.doc||{};}
 let runner=null,timer=null;
 const project=()=>state.projects.find(p=>p.id===state.projectId)||state.projects[0];
 const agentById=id=>state.agents.find(a=>a.id===id);
@@ -627,7 +628,7 @@ function rollCodename(button){
 const profileDismissed=()=>!!ui.selectedId&&ui.dismissedId===ui.selectedId;
 const isShownSelected=id=>id===ui.selectedId&&!profileDismissed();
 function selectAgent(id){if(!agentById(id))return;ui.selectedId=id;ui.dismissedId=null;render();}
-function closeModal(){if(ui.modal==='db-setup'&&diskSync.setup)return;if(ui.modal==='feature')featureChatStop(true);if(ui.modal==='agent-chat')agentChatStop(true);if(ui.modal==='teams'){docChatStop(true);teamsPowerOff();}const focus=ui.returnFocus;$('#modalRoot').innerHTML='';ui.modal=null;ui.draft=null;ui.pendingPlan=null;ui.confirm=null;if(focus?.isConnected)focus.focus({preventScroll:true});}
+function closeModal(){if(ui.modal==='db-setup'&&diskSync.setup)return;if(ui.modal==='feature')featureChatStop(true);if(ui.modal==='agent-chat')agentChatStop(true);if(ui.modal==='ideas')ideaChatStop(true);if(ui.modal==='teams'){docChatStop(true);teamsPowerOff();}const focus=ui.returnFocus;$('#modalRoot').innerHTML='';ui.modal=null;ui.draft=null;ui.pendingPlan=null;ui.confirm=null;if(focus?.isConnected)focus.focus({preventScroll:true});}
 function showModal(title,subtitle,body,footer='',size='',kind='other'){
  if(ui.modal==='feature'&&kind!=='feature')featureChatStop(true);if(ui.modal==='agent-chat'&&kind!=='agent-chat')agentChatStop(true);if(ui.modal==='teams'&&kind!=='teams')docChatStop(true);
  if(!ui.modal)ui.returnFocus=document.activeElement;ui.modal=kind;
@@ -1067,15 +1068,15 @@ function blankProject(sq){return{id:id('project'),code:'OP-'+String(state.projec
 /* Nova operação: a two-step wizard (name, then an existing squad or a new one built in the Squad Studio). The operation is created
    right away with an empty briefing; projectGaps/runGate keep it from running until the project is complete. */
 const opNewSub=step=>`${'OP-'+String(state.projects.length+1).padStart(3,'0')} / ${step}`;
-function openOpNew(name=''){
+function openOpNew(name='',ideaId=''){
  if(!guardMutation())return;if(state.projects.length>=30)return toast('Limite de 30 projetos por workspace.','error');
- ui.opNew={name};
+ ui.opNew={name,ideaId};
  showModal('NOVA <span class="word-tag">OPERAÇÃO</span>',opNewSub('1 DE 2 · NOME'),`<form id="opNewForm" novalidate><div class="field"><label for="opNewName">NOME DO PROJETO</label><input id="opNewName" name="name" value="${E(name)}" maxlength="70" placeholder="Ex.: Atlas Commerce" autocomplete="off" autofocus></div><p class="hint">Depois você escolhe a squad que vai executar a operação.</p></form>`,`${cancelButton}<button class="btn primary" type="submit" form="opNewForm">${icon('arrow')}Continuar</button>`,'narrow','op-new');
 }
 function opNewNext(form){
  const name=String(new FormData(form).get('name')||'').trim().replace(/\s+/g,' ').slice(0,70);
  if(!name){$('#opNewName')?.focus();return toast('Informe o nome do projeto.','error');}
- ui.opNew={name};opNewSquadStep();
+ ui.opNew={name,ideaId:ui.opNew?.ideaId||''};opNewSquadStep();
 }
 function opNewSquadStep(){
  if(!ui.opNew?.name)return openOpNew();const ready=state.squads.filter(q=>!squadMissing(q,false).length).length,full=state.squads.length>=30;
@@ -1093,16 +1094,16 @@ function opNewCreate(form){
 }
 function opNewNewSquad(){
  const name=ui.opNew?.name;if(!name)return openOpNew();
- ui.opPending={name};newSquad();
+ ui.opPending={name,ideaId:ui.opNew?.ideaId||''};newSquad();
  if(!ui.squadDraft?.isNew){ui.opPending=null;return;}
  toast(`Monte a squad de ${name}. Ao criar a squad, a operação é criada com ela.`);
 }
 function createOperation(name,sq,msg){
- if(!guardMutation())return;ui.opPending=null;if(!name||!sq)return;if(state.projects.length>=30)return toast('Limite de 30 projetos por workspace.','error');
- const p=blankProject(sq);p.name=name;applySquad(p,sq);p.folder=projectFolderName(p,state.projects.map(x=>x.folder));p.sprints=[createSprint(1)];ensureSetup(p);state.projects.push(p);
+ if(!guardMutation())return;const ideaId=(ui.opPending||ui.opNew)?.ideaId||'';ui.opPending=null;if(!name||!sq)return;if(state.projects.length>=30)return toast('Limite de 30 projetos por workspace.','error');
+ const p=blankProject(sq);p.name=name;applySquad(p,sq);p.folder=projectFolderName(p,state.projects.map(x=>x.folder));p.sprints=[createSprint(1)];ensureSetup(p);const idea=ideaById(ideaId);if(idea)ideaApplyToProject(idea,p);state.projects.push(p);
  state.projectId=p.id;ui.selectedId=p.commanderId;ui.opsNew=null;ui.opNew=null;ui.opsFeature=null;ui.opsFeatureDraft=null;ui.opsPlan=null;
  log(`Operação ${p.name} criada com a squad ${sq.name}.`,'system',null,p);save();if(ui.modal)closeModal();ui.view='projects';render();$('#projectBriefing')?.focus();
- toast(msg||'Operação criada com o setup do projeto na Sprint 01. Escreva o briefing ou abra o Agent Teams para co-escrever com a squad.');
+ toast(msg||(idea?'Operação criada com o briefing, a visão, o escopo e o glossário da ideia. Falta a arquitetura e um ADR: abra o Agent Teams para co-escrever com a squad.':'Operação criada com o setup do projeto na Sprint 01. Escreva o briefing ou abra o Agent Teams para co-escrever com a squad.'));
 }
 /* Project documentation (exported to docs/project and docs/architecture). docs/standards comes from the squad's DIRETRIZES. */
 const ADR_SKELETON='## Contexto\n\n\n## Decisão\n\n\n## Consequências\n';
@@ -1214,11 +1215,11 @@ function flashField(el){el.classList.remove('fe-updated');void el.offsetWidth;el
 // Markdown blocks (Escopo, Critérios, Tarefas): rendered like the DIRETRIZES preview, click to edit the source, collapsible.
 const FE_MD=[{field:'description',id:'featureDescription',name:'description',label:'ESCOPO',hint:'o que deve ser entregue',placeholder:'Contexto, comportamento esperado e limites da feature.',empty:'Clique para escrever o escopo da feature.'},{field:'criteria',id:'featureCriteria',name:'criteria',label:'CRITÉRIOS DE ACEITAÇÃO',hint:'lista verificável',placeholder:'- Dado… quando… então…',empty:'Clique para escrever os critérios de aceitação.'},{field:'tasks',id:'featureTasks',name:'tasks',label:'TAREFAS',hint:'checklist',placeholder:'- [ ] Criar tabela products\n- [ ] Endpoint GET /products com paginação',empty:'Clique para quebrar a feature em tarefas.'}];
 const FE_MD_TOOLS=[['bold','B','Negrito (Ctrl+B)'],['italic','I','Itálico (Ctrl+I)'],['h','H','Subtítulo'],['ul','•','Lista'],['check','☐','Checklist'],['code','</>','Código']];
-function feCount(field,v){const t=String(v||'').trim();if(!t)return'vazio';if(['description','briefing','vision','architecture'].includes(field)){const n=t.split(/\s+/).length;return`${n} palavra${n===1?'':'s'}`;}if(DOC_MD.some(d=>d.list&&d.field===field)){const n=t.split('\n').filter(l=>l.trim()).length,[one,many]=field==='glossary'?['termo','termos']:['item','itens'];return`${n} ${n===1?one:many}`;}const lines=t.split('\n').filter(l=>l.trim()&&!/^#{1,6}\s/.test(l.trim())),bullets=lines.filter(l=>/^\s*(?:[-*•]|\d+[.)])\s+/.test(l)).length,n=bullets||lines.length,word=field==='tasks'?'tarefa':'critério';return`${n} ${word}${n===1?'':'s'}`;}
+function feCount(field,v){const t=String(v||'').trim();if(!t)return'vazio';if(['description','briefing','vision','architecture'].includes(field)||IDEA_FIELDS.some(d=>!d.list&&d.field===field)){const n=t.split(/\s+/).length;return`${n} palavra${n===1?'':'s'}`;}if([...DOC_MD,...IDEA_FIELDS].some(d=>d.list&&d.field===field)){const n=t.split('\n').filter(l=>l.trim()).length,[one,many]=field==='glossary'||field==='glossario'?['termo','termos']:['item','itens'];return`${n} ${n===1?one:many}`;}const lines=t.split('\n').filter(l=>l.trim()&&!/^#{1,6}\s/.test(l.trim())),bullets=lines.filter(l=>/^\s*(?:[-*•]|\d+[.)])\s+/.test(l)).length,n=bullets||lines.length,word=field==='tasks'?'tarefa':'critério';return`${n} ${word}${n===1?'':'s'}`;}
 // List fields (scope, glossary) hold one item per line, like the export: one bullet per line, the glossary term in bold.
-function feViewHTML(def,v){if(!String(v||'').trim())return`<p class="fe-md-empty">${E(def.empty)}</p>`;if(!def.list)return renderMarkdown(v);return`<ul>${String(v).split('\n').map(l=>l.trim().replace(/^(?:[-*•]|\d+[.)])\s+/,'')).filter(Boolean).map(l=>{const m=def.field==='glossary'&&l.match(/^(.+?)\s*(?::|—|–|\s-\s)\s*(.+)$/);return`<li>${m?`<b>${E(m[1])}</b>: ${E(m[2])}`:E(l)}</li>`;}).join('')}</ul>`;}
+function feViewHTML(def,v){if(!String(v||'').trim())return`<p class="fe-md-empty">${E(def.empty)}</p>`;if(!def.list)return renderMarkdown(v);return`<ul>${String(v).split('\n').map(l=>l.trim().replace(/^(?:[-*•]|\d+[.)])\s+/,'')).filter(Boolean).map(l=>{const m=(def.field==='glossary'||def.field==='glossario')&&l.match(/^(.+?)\s*(?::|—|–|\s-\s)\s*(.+)$/);return`<li>${m?`<b>${E(m[1])}</b>: ${E(m[2])}`:E(l)}</li>`;}).join('')}</ul>`;}
 function feMdFieldHTML(def,value){const edit=!String(value||'').trim();return`<section class="fe-md${edit?' editing':''}" data-field="${def.field}"><header class="fe-md-head"><button type="button" class="fe-md-toggle" data-action="fe-collapse" aria-expanded="true"><span class="fe-chev"></span>${def.label}<small>${def.hint}</small></button><em class="fe-md-count">${feCount(def.field,value)}</em><div class="fe-md-modes" role="group" aria-label="Modo de ${def.label.toLowerCase()}"><button type="button" data-action="fe-md-mode" data-mode="view" class="${edit?'':'on'}">Visualizar</button><button type="button" data-action="fe-md-mode" data-mode="edit" class="${edit?'on':''}">Editar</button></div></header><div class="fe-md-body">${def.list?'':`<div class="fe-md-tools">${FE_MD_TOOLS.map(([k,l,t])=>`<button type="button" data-action="fe-md-tool" data-tool="${k}" title="${t}" aria-label="${t}">${E(l)}</button>`).join('')}</div>`}<div class="conv-md fe-md-view" data-action="fe-md-open" tabindex="0" role="button" aria-label="Editar ${def.label.toLowerCase()}">${feViewHTML(def,value)}</div><textarea id="${def.id}" class="fe-area" name="${def.name}" maxlength="${def.max||8000}" placeholder="${E(def.placeholder)}" aria-label="${def.label}">${E(value||'')}</textarea></div></section>`;}
-function feMdRefresh(sec){const def=[...FE_MD,...DOC_MD].find(d=>d.field===sec?.dataset.field),ta=sec?.querySelector('.fe-area');if(!def||!ta)return;sec.querySelector('.fe-md-view').innerHTML=feViewHTML(def,ta.value);sec.querySelector('.fe-md-count').textContent=feCount(def.field,ta.value);}
+function feMdRefresh(sec){const def=[...FE_MD,...DOC_MD,...IDEA_FIELDS].find(d=>d.field===sec?.dataset.field),ta=sec?.querySelector('.fe-area');if(!def||!ta)return;sec.querySelector('.fe-md-view').innerHTML=feViewHTML(def,ta.value);sec.querySelector('.fe-md-count').textContent=feCount(def.field,ta.value);}
 function feMdMode(sec,mode){if(!sec)return;const ta=sec.querySelector('.fe-area');sec.classList.toggle('editing',mode==='edit');sec.querySelectorAll('[data-action="fe-md-mode"]').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));if(mode==='edit'){sec.classList.remove('collapsed');sec.querySelector('[data-action="fe-collapse"]')?.setAttribute('aria-expanded','true');autoGrow(ta);ta.focus();}else feMdRefresh(sec);}
 // Toolbar: wraps the selection (bold/italic/code) or prefixes the selected lines (heading/list/checklist); applying again removes it.
 function feMdTool(ta,tool){
@@ -1257,7 +1258,7 @@ function feClock(t){const d=new Date(t),today=d.toDateString()===new Date().toDa
 // SOUL in the conversation: tone, rhythm and greeting of the agent (never the rules, the technical content or the JSON).
 function feGreeting(a,fallback){const list=(a?.hellos||[]).map(h=>String(h).trim()).filter(Boolean);return list.length?list[Math.floor(Math.random()*list.length)]:fallback||'Oi! Me conte o que essa feature precisa resolver. Eu escrevo o escopo, os critérios e as tarefas junto com você, e você ajusta o que quiser.';}
 function soulBlock(a,greeting){const soul=String(a?.soul||'').trim(),hello=String(greeting||'').trim();if(!soul&&!hello)return'';return['## SOUL: como você conversa',soul,'- A SOUL é o seu temperamento, não um personagem. Converse como uma pessoa de verdade mandando mensagem para um colega de trabalho: primeira pessoa, frases naturais e variadas, no seu ritmo e com o seu humor.','- Nada de bordões, trocadilhos repetidos ou metáforas temáticas forçadas. Se uma comparação vier natural, uma basta.','- Nunca use travessão (— ou –) nem hífen como pontuação. Use vírgula, ponto ou dois-pontos.','- Fuja do jeito de texto de IA: não abra com "Claro!", "Boa pergunta" ou "Ótima pergunta!", não feche com "Espero ter ajudado" ou "Em resumo", não use títulos, negrito ou listas com marcadores na mensagem, não enfileire adjetivos nem itens de três em três e não termine toda mensagem com uma pergunta genérica.','- Você está sempre de prontidão: responde na hora, pronto para agir.','- A SOUL muda só o tom da conversa: não muda as regras, o conteúdo técnico nem o formato do JSON dos campos.',hello?`- Você abriu esta conversa dizendo: "${hello}". Não repita o cumprimento.`:''].filter(Boolean).join('\n');}
-function coWriteRoleTag(a){return a?.role==='po'?'RECONHECEDOR PRD':a?.role==='architect'?'RECONHECEDOR ADR':a?roleLabel(a).toUpperCase():'';}
+function coWriteRoleTag(a){return a?.id===IDEA_AGENT_ID?'ESTRATEGISTA DE PRODUTO':a?.role==='po'?'RECONHECEDOR PRD':a?.role==='architect'?'RECONHECEDOR ADR':a?roleLabel(a).toUpperCase():'';}
 function feChatHTML(a,model,live,opts={}){
  const name=E(a?.name||opts.none||'SEM AGENTE PRD'),send='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>';
  // Header unchanged (avatar, name + model chip, role); only the conversation below follows the iMessage style.
@@ -1285,11 +1286,11 @@ function feSenderFor(m){const c=chatNow();if(!c?.group||m.role!=='agent'||!m.age
 function chatWho(a){const row=$('#feMsgs .fe-typing-row'),el=row?.querySelector('.fe-typing-who');if(!el)return;const on=!!(a&&chatNow()?.group);el.innerHTML=on?`<img src="${portrait(a)}" alt="">${E(a.name)}`:'';if(on)row.dataset.who=a.id;else delete row.dataset.who;}
 function feTimeBefore(list,i){const m=list[i],p=list[i-1];return p&&m.at-p.at>5*60e3?`<div class="fe-time">${feClock(m.at)}</div>`:'';}
 // The chat on screen: the agent chat (phone) or the co-writing chat of the feature editor; both use the same DOM ids.
-function chatNow(){return ui.modal==='agent-chat'?ui.agentChat:ui.modal==='teams'?ui.docChat:ui.featureChat;}
+function chatNow(){return ui.modal==='agent-chat'?ui.agentChat:ui.modal==='teams'?ui.docChat:ui.modal==='ideas'?ui.ideaChat:ui.featureChat;}
 /* Chats between openings (ui.featureChats / agentChats / docChats) and, with the bridge, in the database (PUT /api/chats/:kind/:key):
    each turn 800 ms after the last change, at once when the chat closes, by beacon when the page closes. */
-const CHAT_MAPS={feature:'featureChats',agent:'agentChats',doc:'docChats'},chatSaveQ=new Map();let chatSaveTimer=0;
-function chatKey(c){return c?.kind==='feature'?(c.featureId&&c.featureId!=='new'?c.featureId:''):c?.kind==='doc'?c.key||'':c?.kind==='agent'?c.agentId||'':'';}
+const CHAT_MAPS={feature:'featureChats',agent:'agentChats',doc:'docChats',idea:'ideaChats'},chatSaveQ=new Map();let chatSaveTimer=0;
+function chatKey(c){return c?.kind==='feature'?(c.featureId&&c.featureId!=='new'?c.featureId:''):c?.kind==='doc'?c.key||'':c?.kind==='agent'?c.agentId||'':c?.kind==='idea'?c.ideaId||'':'';}
 // What a chat keeps: no live bubble, undo snapshot or retry handle; an agent chat's old options are spent.
 function chatSnapshot(c){
  const msgs=c.messages.filter(m=>!m.live);
@@ -1306,7 +1307,7 @@ function chatFlush(leaving=false){
   if(leaving&&navigator.sendBeacon&&body.length<60000&&navigator.sendBeacon(`${url}?token=${BRIDGE_TOKEN}`,new Blob([body],{type:'application/json'})))continue;
   bridgeFetch(url,{method:'PUT',body,keepalive:leaving&&body.length<60000}).catch(()=>{});}
 }
-function chatAgent(c){return c?.kind==='agent'||c?.kind==='doc'?agentById(c.speakerId||c.agentId):coWriterAgent();}
+function chatAgent(c){if(c?.kind==='idea')return ideaAgent();return c?.kind==='agent'||c?.kind==='doc'?agentById(c.speakerId||c.agentId):coWriterAgent();}
 function renderFeatureChat(onReady){
  const box=$('#feMsgs'),c=chatNow();if(!box||!c)return;
  const greet=!c.greeted&&!c.messages.length&&!feReduced(),hellos=c.group?c.group.map(id=>({a:agentById(id),text:c.greetings?.[id]})).filter(h=>h.a&&h.text):[{text:c.greeting||feGreeting(chatAgent(c))}];
@@ -1388,13 +1389,13 @@ async function chatApply(c,reply,data,changes,cost,meta){
  }
  m.editing=null;m.prev=changes.length?prev:null;chatFooter(m);return m;
 }
-function undoCoWrite(mid){const c=chatNow(),m=c?.messages.find(x=>x.id===mid);if(!m?.prev)return;for(const [k,v] of Object.entries(m.prev)){if(k==='adrs')setDocAdrs(v);else setFeField(k,v);}m.prev=null;chatFooter(m);if(c.group){c.sharing=null;teamsSync();}}
+function undoCoWrite(mid){const c=chatNow(),m=c?.messages.find(x=>x.id===mid);if(!m?.prev)return;for(const [k,v] of Object.entries(m.prev)){if(k==='adrs')setDocAdrs(v);else setFeField(k,v);}m.prev=null;chatFooter(m);if(c.kind==='idea')ideaDirty();if(c.group){c.sharing=null;teamsSync();}}
 // One turn for a block of new messages; messages sent meanwhile wait in the queue and go together next. In the meetup (c.group)
 // the round is a queue of agents (docTurnCrew): each one is its own claude -p (own instructions, SOUL, model and effort), sees what
 // the previous ones said in this round and can pass the word to a colleague ("next"), at most TEAMS_ROUND turns per round.
 const TEAMS_ROUND=3;
 async function runCoWrite(msgs){
- const c=chatNow(),doc=c?.kind==='doc'?PROJECT_DOCS[c.doc]:null;if(!c||c.kind==='agent'||!msgs.length)return;
+ const c=chatNow(),doc=c?.kind==='doc'?PROJECT_DOCS[c.doc]:null,idea=c?.kind==='idea';if(!c||c.kind==='agent'||!msgs.length)return;
  const crew=c.group?docTurnCrew(c,msgs):[chatAgent(c)].filter(Boolean);if(!crew.length)return;
  const token={};c.token=token;c.busy=true;c.read=false;c.sharing=null;const mine=()=>chatNow()===c&&c.token===token,round=[];
  let limit=TEAMS_ROUND;
@@ -1404,7 +1405,7 @@ async function runCoWrite(msgs){
    const turn={i,crew,round};
    try{
     // Chat runs: no tools and no plan mode (its planning flow slowed replies and made the model fake tool calls); text streams live.
-    const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:doc?docCoWritePrompt(a,c,msgs,turn):coWritePrompt(a,msgs),systemPrompt:agentSystemPrompt(a)+'\n\n'+[soulBlock(a,chatGreeting(c,a)),doc?docCoWriteSystem(doc,a,c,turn):COWRITE_SYSTEM].filter(Boolean).join('\n\n'),label:doc?`${a.name} / co-escrita ${doc.title.toLowerCase()}`:`${a.name} / co-escrita ${ui.opsFeatureDraft?.feature.key||''}`,meta:runMeta(doc&&ui.opsNew?null:project(),a,doc?null:ui.opsFeatureDraft?.feature,doc?'doc':'cowrite'),options:{...runOptionsFor(a,runtime(),doc&&ui.opsNew?null:project()),...CHAT_RUN}})});
+    const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:idea?ideaPrompt(a,c,msgs):doc?docCoWritePrompt(a,c,msgs,turn):coWritePrompt(a,msgs),systemPrompt:agentSystemPrompt(a)+'\n\n'+[soulBlock(a,chatGreeting(c,a)),idea?IDEA_SYSTEM:doc?docCoWriteSystem(doc,a,c,turn):COWRITE_SYSTEM].filter(Boolean).join('\n\n'),label:idea?`${a.name} / incubadora de ideias`:doc?`${a.name} / co-escrita ${doc.title.toLowerCase()}`:`${a.name} / co-escrita ${ui.opsFeatureDraft?.feature.key||''}`,meta:runMeta(idea||(doc&&ui.opsNew)?null:project(),a,doc||idea?null:ui.opsFeatureDraft?.feature,doc?'doc':'cowrite'),options:{...runOptionsFor(a,runtime(),idea?{folder:IDEA_FOLDER}:doc&&ui.opsNew?null:project()),...CHAT_RUN}})});
     if(!mine()){bridgeFetch(`/api/runs/${started.runId}/cancel`,{method:'POST'}).catch(()=>{});return;}
     c.runId=started.runId;c.read=true;chatReceipt();chatTyping(true);
     // The tile goes from "pensando" to "falando" with the first words; a screen still shared by a colleague goes back to the gallery.
@@ -1412,7 +1413,7 @@ async function runCoWrite(msgs){
     if(!mine())return;
     const lm=live.stop();c.runId=null;chatTyping(false);const secs=Math.max(1,Math.round((Date.now()-c.started)/1000));
     if(exit.isError){if(lm)chatSettle(lm,{});chatPush(exit.status==='cancelled'?{role:'system',text:'Resposta interrompida.'}:{role:'system',text:`Não consegui responder: ${exit.error||'falha na execução do Claude Code.'}`,error:true,retry:msgs.map(x=>x.id)});break;}
-    const out={},m=await (doc?applyDocWrite:applyCoWrite)(exit.result||'',exit.costUsd,{secs,m:lm,agent:c.group?a:null,out});
+    const out={},m=await (idea?applyIdeaWrite:doc?applyDocWrite:applyCoWrite)(exit.result||'',exit.costUsd,{secs,m:lm,agent:c.group?a:null,out});
     if(!mine())return;
     round.push({agent:a,mid:m?.id,text:m?.text||'',updated:m?.updated||[]});
     // A guest leaves once it delivered (it waits when it asked the person something); a host can call guests, who speak next.
@@ -1469,6 +1470,123 @@ function retryCoWrite(mid){const c=chatNow(),note=c?.messages.find(x=>x.id===mid
 function featureChatStop(discard=false){
  const c=ui.featureChat;if(!c)return;if(c.runId)bridgeFetch(`/api/runs/${c.runId}/cancel`,{method:'POST'}).catch(()=>{});
  if(discard){chatStash(c);c.token=null;ui.featureChat=null;}
+}
+/* Incubadora de ideias: a product strategist (CATALYST, outside any squad) turns a raw idea into a product document (state.ideas),
+   co-written in the shared chat engine (kind 'idea', ui.ideaChat, modal kind 'ideas', same DOM ids). "Criar operação" hands the
+   document to the op-new wizard (ui.opNew.ideaId), and createOperation fills briefing, vision, scope and glossary from it.
+   Only with the bridge; runs use the folder projects/incubadora (no operation). The form autosaves (ideaDirty). */
+const IDEA_FOLDER='incubadora',IDEA_AGENT_ID='agent-catalyst';
+const IDEA_FIELDS=[
+ {field:'problema',id:'ideaProblema',name:'problema',label:'PROBLEMA E DOR',short:'Problema e dor',hint:'quem sofre, onde e quanto custa',placeholder:'Quem sente a dor, em que momento do fluxo, como resolve hoje e quanto isso custa.',empty:'Clique para descrever o problema.',max:12000,prompt:'o problema e a dor: quem sofre, em que momento, como resolve hoje, quanto custa e evidências (marque hipóteses a validar)'},
+ {field:'publico',id:'ideaPublico',name:'publico',label:'PÚBLICO E CLIENTE',short:'Público e cliente',hint:'quem usa e quem paga',placeholder:'Perfis de quem usa, quem decide a compra e quem paga.',empty:'Clique para descrever o público.',max:12000,prompt:'quem usa, quem decide e quem paga; segmentos priorizados para começar'},
+ {field:'propostaValor',id:'ideaProposta',name:'propostaValor',label:'PROPOSTA DE VALOR',short:'Proposta de valor',hint:'por que escolher este produto',placeholder:'Por que alguém trocaria o que usa hoje por este produto.',empty:'Clique para escrever a proposta de valor.',max:12000,prompt:'a proposta de valor e os diferenciais, em parágrafos curtos'},
+ {field:'concorrencia',id:'ideaConcorrencia',name:'concorrencia',label:'CONCORRÊNCIA E ALTERNATIVAS',short:'Concorrência',hint:'o que existe e onde falha',placeholder:'Soluções existentes, planilhas e processos manuais, e onde cada um falha.',empty:'Clique para mapear a concorrência.',max:12000,prompt:'concorrentes e alternativas (inclusive processo manual) e onde falham; só cite o que você tem certeza que existe e marque o resto como hipótese'},
+ {field:'mvp',id:'ideaMvp',name:'mvp',label:'MVP',short:'MVP',hint:'a menor versão que valida a ideia',placeholder:'A menor versão que prova que o problema é real e que alguém paga.',empty:'Clique para descrever o MVP.',max:12000,prompt:'o MVP: a menor versão entregável que valida a hipótese principal e o que ela precisa provar'},
+ {field:'escopoMvp',id:'ideaEscopoMvp',name:'escopoMvp',label:'ENTRA NO MVP',short:'Entra no MVP',hint:'um item por linha',placeholder:'Cadastro de fornecedores\nPedido de compra com aprovação',empty:'Clique para listar o que entra no MVP.',max:8000,list:true,prompt:'lista, um item por linha e sem marcadores, do que entra no MVP (vira o escopo da operação)'},
+ {field:'foraMvp',id:'ideaForaMvp',name:'foraMvp',label:'FICA PARA DEPOIS',short:'Fica para depois',hint:'um item por linha',placeholder:'Integração com ERP\nAplicativo mobile',empty:'Clique para listar o que fica de fora do MVP.',max:8000,list:true,prompt:'lista, um item por linha e sem marcadores, do que fica de fora do MVP'},
+ {field:'monetizacao',id:'ideaMonetizacao',name:'monetizacao',label:'MONETIZAÇÃO',short:'Monetização',hint:'como gera receita',placeholder:'Modelo de receita, preço inicial, quem paga e por que paga.',empty:'Clique para escrever o modelo de monetização.',max:12000,prompt:'modelo de receita, faixa de preço como hipótese, quem paga e por que paga'},
+ {field:'metricas',id:'ideaMetricas',name:'metricas',label:'MÉTRICAS DE SUCESSO',short:'Métricas',hint:'o que prova ou refuta a ideia',placeholder:'Métricas de ativação, retenção e receita com a meta de cada fase.',empty:'Clique para definir as métricas.',max:12000,prompt:'métricas que provam ou refutam a hipótese, com a meta de cada fase'},
+ {field:'riscos',id:'ideaRiscos',name:'riscos',label:'RISCOS E PREMISSAS',short:'Riscos e premissas',hint:'o que pode dar errado',placeholder:'Premissas a validar, riscos de mercado, técnicos e legais, e como reduzir cada um.',empty:'Clique para listar os riscos.',max:12000,prompt:'premissas a validar e riscos (mercado, técnico, legal, adoção) com a forma de reduzir cada um'},
+ {field:'roadmapFases',id:'ideaRoadmap',name:'roadmapFases',label:'ROADMAP POR FASES',short:'Roadmap por fases',hint:'MVP, V1, V2',placeholder:'Fase 1 (MVP): …\nFase 2 (V1): …\nFase 3 (V2): …',empty:'Clique para escrever o roadmap por fases.',max:12000,prompt:'roadmap de alto nível por fases (MVP, V1, V2) com o que entra em cada uma e por quê; não quebre em sprints nem features, isso é trabalho da squad depois'},
+ {field:'glossario',id:'ideaGlossario',name:'glossario',label:'GLOSSÁRIO',short:'Glossário',hint:'termo: definição, um por linha',placeholder:'Cotação: pedido de preço a vários fornecedores',empty:'Clique para escrever os termos do domínio.',max:8000,list:true,prompt:'termos do domínio no formato "termo: definição", um por linha'}
+];
+Object.assign(FE_FIELD_ID,{name:'ideaName',...Object.fromEntries(IDEA_FIELDS.map(f=>[f.field,f.id]))});Object.assign(FE_FIELD_LABEL,{name:'Nome',...Object.fromEntries(IDEA_FIELDS.map(f=>[f.field,f.short]))});
+const IDEA_QUICK=[['Expandir a ideia','Vou te contar minha ideia. Me ajude a expandi-la e faça as perguntas que importam antes de escrever qualquer coisa.'],['Primeira versão do documento','Monte uma primeira versão do documento de produto com o que já conversamos e me diga o que ainda precisa ser validado.'],['Desafiar a ideia','Desafie a ideia: o que pode estar errado, quem já resolve isso e o que eu não estou enxergando?']];
+const IDEA_SYSTEM=['# Modo incubadora de ideias (SQUAD/CODE)','Você é o estrategista de produto da Incubadora: conversa com a pessoa sobre uma ideia ainda crua e a transforma em um produto viável, entregável e monetizável, registrando o resultado no documento de produto ao lado. Não execute nada, não use ferramentas e não escreva código.','- Responda em português do Brasil, com mensagens curtas de chat (até 6 frases), no jeito da sua SOUL. Faça no máximo 2 perguntas por vez e comece pelo problema e por quem o sente, não pela solução.','- Seja franco: desafie premissas fracas, aponte alternativas que a pessoa pode estar ignorando e diga quando algo não se sustenta. Não invente números de mercado nem nomes de empresas de que não tenha certeza: marque como hipótese a validar.','- A mensagem é conversa: texto corrido, sem travessões, sem listas e sem negrito. Markdown, listas e subtítulos ficam só dentro dos campos do JSON, sempre sem emojis.','- Se houver o que registrar ou uma pergunta com opções, termine com UM bloco ```json contendo só as chaves necessárias:','  - "ask": {"question": "pergunta curta", "options": ["opção 1", "opção 2"]} para perguntar com 2 a 4 opções curtas de escolha única. As opções viram botões e a pessoa também pode responder escrevendo. A pergunta vai só aí, não a repita no texto;','  - "name": nome curto da ideia ou do produto, só se ainda for "Nova ideia" ou se a pessoa pedir;',...IDEA_FIELDS.map(f=>`  - "${f.field}": ${f.prompt};`),'- Os campos são Markdown. Nos campos de lista, um item por linha, só o texto de cada item, sem marcadores.','- Parta do conteúdo atual do documento: preserve o que a pessoa escreveu e mude só o necessário. Cada valor do JSON substitui o campo inteiro.','- Só preencha o que a conversa sustenta. Conduza em etapas (problema e público, valor e concorrência, MVP, monetização e métricas, riscos e roadmap) e diga o que ainda falta para o produto ficar pronto para virar operação.','- O roadmap é de alto nível, por fases. Sprints e features são trabalho da squad depois que a operação for criada.'].join('\n');
+function ideaKeys(){return['problema','publico','propostaValor','concorrencia','mvp','escopoMvp','foraMvp','monetizacao','metricas','riscos','roadmapFases','glossario'];}
+function ideaById(i){return(state.ideas||[]).find(x=>x.id===i)||null;}
+function ideaAgent(){return agentById(IDEA_AGENT_ID)||null;}
+// The catalog agent lives outside any squad; it is recruited on first use and again if the person deletes it.
+function ensureIdeaAgent(){
+ const cur=ideaAgent();if(cur)return cur;const p=presetByName('CATALYST');if(!p)return null;
+ if(state.agents.length>=80){toast('Limite de 80 agentes atingido.','error');return null;}
+ const a={id:IDEA_AGENT_ID,...presetDefaults(p),nextId:'',productionStage:'ready',hex:null,linkId:'',desk:''};
+ a.hex=nearestFreeHex(validHex(ROLES.po.hex)?ROLES.po.hex:{q:0,r:0},takenHexes(),0)||{q:0,r:0};a.desk=firstFreeDesk(takenDesks(),p.role);state.agents.push(a);save();return a;
+}
+function newIdeaChat(ideaId){const saved=ui.ideaChats?.[ideaId],a=ideaAgent();return{kind:'idea',ideaId,agentId:a?.id||null,greeting:saved?.greeting||feGreeting(a,'Oi! Me conta a ideia, mesmo que esteja crua. A gente testa, lapida e transforma em produto.'),messages:saved?saved.messages.map(m=>({...m})):[],seq:saved?.seq||0,queue:[],busy:false,runId:null,started:0,token:null,read:false,opened:Date.now()};}
+function ideaHTML(idea){
+ const a=ideaAgent();
+ return`<div class="fe-layout"><form id="ideaForm" class="fe-form" novalidate><input id="ideaName" class="fe-title" name="name" value="${E(idea.name)}" maxlength="80" placeholder="Nome da ideia" autocomplete="off" aria-label="Nome da ideia"><p class="hint doc-hint">O documento é salvo sozinho. Converse com ${E(a?.name||'o agente')} ao lado: ele preenche as seções e você ajusta o que quiser. Quando estiver pronto, <b>Criar operação</b> leva o briefing, a visão, o escopo e o glossário para a squad.</p>${IDEA_FIELDS.map(def=>feMdFieldHTML(def,idea.doc[def.field]||'')).join('')}</form>${feChatHTML(a,coWriterModel(a),liveMode(),{quick:IDEA_QUICK,none:'SEM AGENTE'})}</div>`;
+}
+function openIdea(ideaId){
+ if(!liveMode())return toast('A Incubadora usa o Claude Code real: rode npm start e abra http://127.0.0.1:4317 com a execução ligada.','error');
+ const idea=ideaById(ideaId);if(!idea)return;if(!ensureIdeaAgent())return;
+ ui.ideaId=idea.id;ui.ideaChat=newIdeaChat(idea.id);
+ showModal('INCUBADORA <span class="word-tag">DE IDEIAS</span>',`${E(ideaAgent().name)} / ESTRATEGISTA DE PRODUTO`,ideaHTML(idea),`<button class="btn" type="button" data-action="idea-export">${icon('download')}Exportar .md</button><span class="grow"></span><button class="btn" type="button" data-action="modal-close">Fechar</button><button class="btn primary" type="button" data-action="idea-operation">${icon('project')}Criar operação</button>`,'wide feature-editor','ideas');
+ renderFeatureChat();requestAnimationFrame(()=>$$('#ideaForm .fe-area').forEach(autoGrow));
+}
+function ideaNew(){
+ if(!liveMode())return toast('A Incubadora usa o Claude Code real: rode npm start e abra http://127.0.0.1:4317 com a execução ligada.','error');
+ if((state.ideas||[]).length>=30)return toast('Limite de 30 ideias por workspace.','error');
+ const now=nowISO(),idea={id:id('idea'),name:'Nova ideia',projectId:'',createdAt:now,updatedAt:now,doc:Object.fromEntries(ideaKeys().map(k=>[k,'']))};
+ (state.ideas||(state.ideas=[])).push(idea);save();render();openIdea(idea.id);
+}
+function ideaDelete(ideaId){
+ const idea=ideaById(ideaId);if(!idea)return;
+ confirmAction('Excluir ideia',`Excluir "${idea.name}" e a conversa com o agente? O documento e a conversa não poderão ser recuperados, mas as operações já criadas continuam.`,()=>{
+  state.ideas=state.ideas.filter(x=>x.id!==ideaId);if(ui.ideaChats)delete ui.ideaChats[ideaId];save();render();
+  if(diskSync.on)bridgeFetch(`/api/chats/idea/${encodeURIComponent(ideaId)}`,{method:'DELETE'}).catch(()=>{});
+ },'Excluir',true);
+}
+// Form to document: the idea in state follows what is on screen (autosave 700 ms after the last edit, at once on close).
+function ideaCollect(){
+ const idea=ideaById(ui.ideaId);if(!idea||!$('#ideaForm'))return null;
+ idea.name=String($('#ideaName')?.value||'').trim().replace(/\s+/g,' ').slice(0,80)||'Nova ideia';
+ for(const f of IDEA_FIELDS){const el=document.getElementById(f.id);if(el)idea.doc[f.field]=String(el.value||'').slice(0,f.max);}
+ return idea;
+}
+function ideaPersist(){clearTimeout(ui.ideaTimer);ui.ideaTimer=0;const idea=ideaCollect();if(!idea)return null;idea.updatedAt=nowISO();save();return idea;}
+function ideaDirty(){clearTimeout(ui.ideaTimer);ui.ideaTimer=setTimeout(ideaPersist,700);}
+function ideaChatStop(discard=false){
+ const c=ui.ideaChat;if(!c)return;if(c.runId)bridgeFetch(`/api/runs/${c.runId}/cancel`,{method:'POST'}).catch(()=>{});
+ if(discard){ideaPersist();chatStash(c);c.token=null;ui.ideaChat=null;ui.ideaId=null;}
+}
+function ideaPrompt(a,c,msgs){
+ const val=i=>(document.getElementById(i)?.value||'').trim(),fresh=new Set(msgs.map(m=>m.id));
+ const history=[`${a.name}: ${c.greeting||feGreeting(a)}`,...c.messages.filter(m=>!fresh.has(m.id)&&m.role!=='system').slice(-12).map(m=>`${m.role==='user'?'Pessoa':a.name}: ${m.text}`)].join('\n\n');
+ return[`# Incubadora de ideias · ${val('ideaName')||'Nova ideia'}`,`## Documento de produto agora (a pessoa pode ter editado)\n${IDEA_FIELDS.map(f=>`### ${f.label}\n${val(f.id)||'(vazio)'}`).join('\n\n')}`,history?`## Conversa até aqui\n${history}`:'',`## ${msgs.length>1?'Novas mensagens':'Nova mensagem'} da pessoa\n${msgs.map(m=>m.text).join('\n\n')}`].filter(Boolean).join('\n\n');
+}
+async function applyIdeaWrite(result,cost,meta={}){
+ const c=ui.ideaChat;if(!c)return null;const {reply,data}=parseCoWrite(result),changes=[];
+ const item=x=>x&&typeof x==='object'?[x.term??x.termo??x.title??x.name,x.definition??x.definicao??x.description].filter(Boolean).join(': '):String(x??'');
+ const lines=v=>(Array.isArray(v)?v.map(item):String(v??'').split('\n')).map(x=>x.trim().replace(/^(?:[-*•]|\d+[.)])\s+/,'')).filter(Boolean).join('\n');
+ if(data&&typeof data==='object'){
+  const nm=typeof data.name==='string'?data.name.trim().replace(/\s+/g,' ').slice(0,80):'',nameEl=document.getElementById('ideaName');
+  if(nm&&nameEl&&nameEl.value.trim()!==nm)changes.push({field:'name',value:nm});
+  for(const f of IDEA_FIELDS){if(!(f.field in data))continue;const raw=data[f.field],v=f.list?lines(raw):Array.isArray(raw)?raw.map(item).join('\n').trim():typeof raw==='string'?raw.trim():null,el=document.getElementById(f.id);if(v===null||!el||el.value.trim()===v)continue;changes.push({field:f.field,value:v.slice(0,f.max)});}
+ }
+ const m=await chatApply(c,reply,data,changes,cost,meta);ideaDirty();return m;
+}
+function ideaMarkdown(idea){
+ const body=IDEA_FIELDS.map(f=>{const v=String(idea.doc[f.field]||'').trim();if(!v)return'';return`## ${f.short}\n\n${f.list?v.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>`- ${l}`).join('\n'):v}`;}).filter(Boolean);
+ return[`# ${idea.name}`,`_Documento de produto gerado na Incubadora de ideias do SQUAD/CODE em ${new Date(idea.updatedAt).toLocaleDateString('pt-BR')}._`,...body].join('\n\n')+'\n';
+}
+function ideaExport(){
+ const idea=ideaPersist()||ideaById(ui.ideaId);if(!idea)return;
+ const slug=idea.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'ideia';
+ download(`${slug}.md`,ideaMarkdown(idea),'text/markdown');
+}
+// Idea to operation: the op-new wizard starts at the squad step with the idea's name; createOperation applies the document.
+function ideaToOperation(){
+ const idea=ideaPersist();if(!idea)return;
+ if(!String(idea.doc.problema+idea.doc.mvp+idea.doc.propostaValor).trim())return toast('Preencha pelo menos o problema, a proposta de valor ou o MVP antes de criar a operação.','error');
+ if(!guardMutation())return;if(state.projects.length>=30)return toast('Limite de 30 projetos por workspace.','error');
+ closeModal();ui.opNew={name:idea.name.slice(0,70),ideaId:idea.id};opNewSquadStep();
+}
+function ideaApplyToProject(idea,p){
+ const d=idea.doc,sec=(t,v)=>String(v||'').trim()?`## ${t}\n${String(v).trim()}`:'';
+ p.briefing=[`Operação criada a partir da ideia "${idea.name}" (Incubadora de ideias).`,sec('Problema e dor',d.problema),sec('Público e cliente',d.publico),sec('Proposta de valor',d.propostaValor),sec('MVP',d.mvp),sec('Monetização',d.monetizacao),sec('Métricas de sucesso',d.metricas),sec('Riscos e premissas',d.riscos),sec('Roadmap por fases',d.roadmapFases)].filter(Boolean).join('\n\n').slice(0,20000);
+ p.vision=[String(d.propostaValor||'').trim(),String(d.publico||'').trim()?`Para quem: ${String(d.publico).trim()}`:'',String(d.concorrencia||'').trim()?`Diferenciais frente às alternativas:\n${String(d.concorrencia).trim()}`:''].filter(Boolean).join('\n\n').slice(0,8000);
+ p.scopeIn=String(d.escopoMvp||'').trim().slice(0,8000);p.scopeOut=String(d.foraMvp||'').trim().slice(0,8000);p.glossary=String(d.glossario||'').trim().slice(0,8000);
+ idea.projectId=p.id;idea.updatedAt=nowISO();
+}
+function ideaCardHTML(i){
+ const done=IDEA_FIELDS.filter(f=>String(i.doc[f.field]||'').trim()).length,percent=Math.round(done/IDEA_FIELDS.length*100),op=state.projects.find(p=>p.id===i.projectId),text=String(i.doc.problema||i.doc.propostaValor||i.doc.mvp||'').trim();
+ return`<article class="home-project"><div class="between"><span class="eyebrow">IDEIA</span>${op?`<span class="tag accent">${E(op.code)}</span>`:''}</div><h3>${E(i.name)}</h3><p>${text?E(text.slice(0,110)):'<em class="muted">Ainda sem conteúdo.</em>'}</p><div class="home-progress"><div class="progress-rail"><span style="width:${percent}%"></span></div><strong>${percent}%</strong></div><div class="between home-project-foot"><small class="muted">${done}/${IDEA_FIELDS.length} SEÇÕES</small><div class="flex"><button class="btn sm" data-action="idea-open" data-id="${E(i.id)}">${icon('arrow')}Abrir</button><button class="icon-button small" data-action="idea-delete" data-id="${E(i.id)}" aria-label="Excluir ideia" title="Excluir ideia">${icon('trash')}</button></div></div></article>`;
+}
+function homeIdeasHTML(){
+ const list=state.ideas||[],a=ideaAgent()||presetByName('CATALYST');
+ return`<section class="home-section home-ideas-wrap"><div class="home-section-head"><span>INCUBADORA DE IDEIAS</span><span>${pad(list.length)}</span></div><div class="home-projects">${list.map(ideaCardHTML).join('')}<button class="home-project new" data-action="idea-new">${icon('sparkle')}<strong>Nova ideia</strong><small>Converse com ${E(a?.name||'o estrategista')} e transforme a ideia em produto.</small></button></div></section>`;
 }
 /* Agent Teams: the first data of an operation (PROJECT_DOCS.kickoff) is co-written in an online meetup, Teams style: a video stage
    with the squad's commander, PRD and ADR reconhecedores, the chat beside it and a Documentos tab. The conversation is a group chat
@@ -2702,8 +2820,8 @@ function renderHome(){
  const root=$('#homeView');if(!root)return;const scroll=root.scrollTop;
  const review=state.projects.reduce((n,p)=>n+p.features.filter(f=>f.status==='review').length,0);
  const today=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
- root.innerHTML=`<div class="home-inner"><header class="home-head"><div><div class="eyebrow">SQUAD CODE / ${E(today)}</div><h1>PAINEL <span>GERAL.</span></h1><p>${state.projects.length} operação(ões), ${state.agents.length} agentes${review?`, <strong>${review} entrega(s) aguardando sua aprovação</strong>`:''}.</p></div><div class="flex wrap home-actions"><button class="btn ghost" data-action="agent-new">${icon('plus')}Novo agente</button><button class="btn ghost" data-action="project-new">${icon('project')}Nova operação</button><button class="btn primary" data-action="view" data-view="network">${icon('arrow')}Abrir rede do squad</button></div></header>
-<section class="home-section home-projects-wrap"><div class="home-section-head"><span>OPERAÇÕES</span><span>${pad(state.projects.length)}</span></div><div class="home-projects">${state.projects.map(homeProjectCard).join('')}<button class="home-project new" data-action="project-new">${icon('plus')}<strong>Nova operação</strong><small>Nome do projeto e squad.</small></button></div></section><section class="home-section home-squads-wrap"><div class="home-section-head"><span>SQUADS</span><span class="flex">${pad(state.squads.length)}<button class="link-button" data-action="squad-studio">SQUAD STUDIO ${icon('chevron')}</button></span></div><div class="home-squads">${homeSquadsHTML()}</div></section>
+ root.innerHTML=`<div class="home-inner"><header class="home-head"><div><div class="eyebrow">SQUAD CODE / ${E(today)}</div><h1>PAINEL <span>GERAL.</span></h1><p>${state.projects.length} operação(ões), ${state.agents.length} agentes${review?`, <strong>${review} entrega(s) aguardando sua aprovação</strong>`:''}.</p></div><div class="flex wrap home-actions"><button class="btn ghost" data-action="agent-new">${icon('plus')}Novo agente</button><button class="btn ghost" data-action="project-new">${icon('project')}Nova operação</button><button class="btn ghost" data-action="idea-new" title="Converse com o estrategista de produto e transforme uma ideia em operação">${icon('sparkle')}Nova ideia</button><button class="btn primary" data-action="view" data-view="network">${icon('arrow')}Abrir rede do squad</button></div></header>
+<section class="home-section home-projects-wrap"><div class="home-section-head"><span>OPERAÇÕES</span><span>${pad(state.projects.length)}</span></div><div class="home-projects">${state.projects.map(homeProjectCard).join('')}<button class="home-project new" data-action="project-new">${icon('plus')}<strong>Nova operação</strong><small>Nome do projeto e squad.</small></button></div></section>${homeIdeasHTML()}<section class="home-section home-squads-wrap"><div class="home-section-head"><span>SQUADS</span><span class="flex">${pad(state.squads.length)}<button class="link-button" data-action="squad-studio">SQUAD STUDIO ${icon('chevron')}</button></span></div><div class="home-squads">${homeSquadsHTML()}</div></section>
 <div class="home-grid"><section class="home-section"><div class="home-section-head"><span>OPERAÇÃO ATIVA</span>${runner?'<i class="dot"></i>':''}</div>${homeRunHTML()}<div class="home-section-head" style="margin-top:22px"><span>AGUARDANDO REVISÃO</span><span>${pad(review)}</span></div><div class="home-list">${homeReviewHTML()}</div></section>
 <section class="home-section"><div class="home-section-head"><span>ATIVIDADE RECENTE</span><button class="link-button" data-action="logs">VER TRANSMISSÕES ${icon('chevron')}</button></div><div class="home-list home-activity-list">${homeActivityHTML()}</div></section></div></div>`;
  root.scrollTop=scroll;
@@ -2786,6 +2904,10 @@ const AGENT_PRESETS={
  prd:[
   {name:'ECHO',role:'po',icon:'file',description:'Escreve o PRD: histórias de usuário, escopo e critérios de aceitação verificáveis.'},
   {name:'SCOUT',role:'po',icon:'search',description:'Reconhecimento de produto. Investiga usuários e requisitos e transforma tudo em um PRD objetivo.'}
+ ],
+ // Incubadora de ideias: fora de qualquer squad (só conversa; ensureIdeaAgent a recruta quando a pessoa abre a Incubadora).
+ idea:[
+  {name:'CATALYST',role:'po',specialty:'Estratégia de produto',icon:'sparkle',model:'opus',description:'Estrategista de produto. Conversa com você sobre uma ideia crua e a transforma em produto viável: problema, público, proposta de valor, concorrência, MVP, monetização, métricas, riscos e fases do roadmap.',style:'Comece pelo problema e por quem o sente, não pela solução. Teste cada premissa com perguntas diretas, desafie o que parecer fraco, compare a ideia com o que o mercado já oferece e diga com franqueza o que não se sustenta. Entregue um produto enxuto: MVP pequeno, monetização plausível e métricas que provem ou refutem a hipótese. Não escreva código, não crie features nem sprints: isso é trabalho da squad depois.'}
  ],
  op:[
   {name:'FORGE',role:'backend',icon:'code'},{name:'PIXEL',role:'frontend',icon:'screen'},{name:'SENTINEL',role:'qa',icon:'shield'},
@@ -2885,7 +3007,7 @@ function retiredPresetName(n,role){const r=({NOMAD:['PROFETA','commander'],'ORÁ
    Catalog presets first, then each specialty's default agent (e.g. PROPHET, the default architect). */
 function presetByName(n){
  if(!n)return null;n=retiredPresetName(n)||n; // renamed presets keep their old agents linked
- const p=[...AGENT_PRESETS.commander,...AGENT_PRESETS.adr,...AGENT_PRESETS.prd,...AGENT_PRESETS.op].find(x=>x.name===n);if(p)return p;
+ const p=[...AGENT_PRESETS.commander,...AGENT_PRESETS.adr,...AGENT_PRESETS.prd,...AGENT_PRESETS.idea,...AGENT_PRESETS.op].find(x=>x.name===n);if(p)return p;
  const e=Object.entries(ROLES).find(([,r])=>r.name===n);return e?{name:n,role:e[0]}:null;
 }
 function agentTemplateOf(a){return presetByName(a?.template)||presetByName(a?.name);}
@@ -3135,7 +3257,7 @@ document.addEventListener('click',event=>{
   case 'view':control.dataset.view==='network'?openSquadView():goView(control.dataset.view);break;case 'squad-view-op':squadViewOp(agentId);break;
   case 'nav-prev':nextView(-1);break;case 'nav-next':nextView(1);break;
   case 'select-agent':{if(MapNetwork.isMoving())MapNetwork.cancelMove();const double=lastSelected.id===agentId&&performance.now()-lastSelected.at<380;lastSelected={id:double?null:agentId,at:performance.now()};ui.actionsFor=agentId;if(double&&ui.view==='network')openAgentChat(agentId);else selectAgent(agentId);break;}
-  case 'agent-new':openAgentEditor();break;case 'agent-edit':openAgentEditor(agentId);break;case 'agent-chat':openAgentChat(agentId);break;case 'agent-move':if(MapNetwork.isMoving()===agentId)MapNetwork.cancelMove();else MapNetwork.startMove(agentId);break;case 'agent-pipeline':case 'squad-studio':openSquadStudio();break;
+  case 'agent-new':openAgentEditor();break;case 'idea-new':ideaNew();break;case 'idea-open':openIdea(agentId);break;case 'idea-delete':ideaDelete(agentId);break;case 'idea-export':ideaExport();break;case 'idea-operation':ideaToOperation();break;case 'agent-edit':openAgentEditor(agentId);break;case 'agent-chat':openAgentChat(agentId);break;case 'agent-move':if(MapNetwork.isMoving()===agentId)MapNetwork.cancelMove();else MapNetwork.startMove(agentId);break;case 'agent-pipeline':case 'squad-studio':openSquadStudio();break;
   case 'agent-duplicate':duplicateAgent(agentId);break;case 'agent-restore':restoreAgentDefaults();break;case 'hello-add':{const list=$('#helloList');if(list&&list.children.length<8){list.insertAdjacentHTML('beforeend',helloRowHTML('',list.children.length));renumberHellos();list.lastElementChild.querySelector('input').focus();}break;}case 'hello-remove':control.closest('.hello-row')?.remove();renumberHellos();break;case 'agent-delete':deleteAgent(agentId);break;case 'agent-export':exportAgent(agentId);break;
   case 'conv-undo':convUndo();break;case 'conv-save-template':convSaveTemplate();break;case 'conv-add-toggle':toggleConvPicker();break;case 'conv-theme':convTheme=convTheme===control.dataset.group?'':control.dataset.group;convCursor=0;renderConvResults();$('#convSearch')?.focus();break;case 'conv-add-subset':convAddSubset(control.dataset.src||'custom');break;case 'conv-sub-remove':control.closest('.conv-subset')?.remove();refreshConvPicker();updateConvPreview();break;case 'conv-sub-save':convSaveSubset(control);break;case 'conv-lib-del-template':convDeleteLibrary('template',control.dataset.id);break;case 'conv-lib-del-subset':convDeleteLibrary('subset',control.dataset.id);break;
   case 'editor-tab':editorTab(control.dataset.tab);break;
@@ -3145,7 +3267,7 @@ document.addEventListener('click',event=>{
   case 'portrait-pick':if(ui.draft?.kind==='agent'){ui.draft.agent.image=PORTRAITS[control.dataset.preset]||'';refreshPortraitPicker();closeLookPicker();}break;
   
   case 'prompt-reset':if(ui.draft?.kind==='agent')$('#agentPrompt').value=ROLES[$('#agentRole').value].prompt;break;
-  case 'projects':openProjects();break;case 'squad-select':selectSquad(agentId);break;case 'squad-open':openSquadStudio(agentId);break;case 'squad-new':newSquad();break;case 'squad-cancel-new':ui.squadDraft=null;ui.squadPick=null;ui.opPending=null;render();break;case 'squad-discard':ui.squadDraft=null;ui.squadPick=null;render();break;case 'squad-delete':deleteSquad(agentId);break;case 'project-export':exportProject(agentId);break;case 'fe-send':if(chatNow()?.kind==='agent')sendAgentChat();else sendFeatureChat();break;case 'fe-quick':sendFeatureChat(control.dataset.text);break;case 'fe-stop':{const k=chatNow()?.kind;if(k==='agent')agentChatStop();else if(k==='doc')docChatStop();else featureChatStop();break;}case 'agent-teams':event.preventDefault();openAgentTeams();break;case 'teams-mention':teamsMentionInsert(control.dataset.name);break;case 'teams-mention-pick':teamsMentionPick(control.dataset.name);break;case 'teams-tab':teamsTab(control.dataset.tab);break;case 'teams-agenda':teamsAgendaOpen(control.dataset.field);break;case 'teams-unshare':if(ui.docChat){ui.docChat.sharing=null;teamsSync();}break;case 'teams-leave':teamsLeave();break;case 'teams-leave-now':closeModal();break;case 'teams-stay':{const b=$('#atConfirm');if(b)b.hidden=true;$('#feChatInput')?.focus();break;}case 'teams-save-leave':$('#docForm')?.requestSubmit();break;case 'fe-undo':undoCoWrite(control.dataset.mid);break;case 'fe-jump':feScroll($('#feMsgs'),true);break;case 'fe-retry':retryCoWrite(control.dataset.mid);break;case 'ac-opt':agentChatChoose(control.dataset.mid,control.dataset.opt,control.dataset.arg||'');break;case 'fe-field':{if(ui.modal==='teams')teamsTab('docs');const el=document.getElementById(FE_FIELD_ID[control.dataset.field]),t=el?.closest('.fe-md')||el;if(t){t.classList.remove('collapsed');t.scrollIntoView({block:'nearest',behavior:'smooth'});t.classList.remove('fe-updated');void t.offsetWidth;t.classList.add('fe-updated');setTimeout(()=>t.classList.remove('fe-updated'),1400);}break;}case 'fe-collapse':{const sec=control.closest('.fe-md'),closed=sec.classList.toggle('collapsed');control.setAttribute('aria-expanded',String(!closed));break;}case 'fe-md-mode':feMdMode(control.closest('.fe-md'),control.dataset.mode);break;case 'fe-md-open':feMdMode(control.closest('.fe-md'),'edit');break;case 'fe-md-tool':feMdTool(control.closest('.fe-md')?.querySelector('.fe-area'),control.dataset.tool);break;case 'adr-add':{const list=control.closest('form')?.querySelector('.adr-list')||$('#adrList');if(list){list.insertAdjacentHTML('beforeend',adrBlockHTML({id:id('adr'),title:'',status:'Proposto',content:ADR_SKELETON},list.children.length));renumberAdrs(list);list.lastElementChild.querySelector('[name=adrTitle]').focus();}teamsSync();break;}case 'adr-remove':{const list=control.closest('.adr-list');control.closest('.adr-block')?.remove();renumberAdrs(list);teamsSync();break;}case 'sq-pick':openPick(control.dataset.slot,control.dataset.index);break;case 'sq-move':moveCursor(Number(control.dataset.dir)||1);break;case 'sq-cursor':clickPickItem(Number(control.dataset.i)||0);break;case 'sq-confirm':confirmPick();break;case 'sq-remove':removeOperator();break;case 'sq-more':pickMore();break;case 'sq-back':pickBack();break;case 'sq-node-view':state.settings.squadNodes=control.dataset.view==='photo'?'photo':'icon';save();render();break;case 'sq-close':ui.squadPick=null;render();break;case 'ops-feature-close':ui.opsFeature=null;ui.opsFeatureDraft=null;render();break;case 'ops-feat-view':ui.opsFeatView=control.dataset.view==='board'?'board':'list';render();break;case 'ops-plan-discard':ui.opsPlan=null;render();break;case 'ops-select':ui.opsFeature=null;ui.opsFeatureDraft=null;ui.opsPlan=null;switchProject(agentId,true);break;case 'ops-cancel-new':ui.opsNew=null;render();break;case 'ops-open-squad':goView('network');MapNetwork.home();break;case 'project-new':openProjectEditor();break;case 'op-new-existing':opNewPickStep();break;case 'op-new-squad':opNewNewSquad();break;case 'op-new-back':openOpNew(ui.opNew?.name);break;case 'op-new-back-squad':opNewSquadStep();break;case 'project-edit':openProjectEditor(agentId);break;case 'project-switch':switchProject(agentId);break;case 'project-delete':deleteProject(agentId);break;case 'briefing':openBriefing();break;
+  case 'projects':openProjects();break;case 'squad-select':selectSquad(agentId);break;case 'squad-open':openSquadStudio(agentId);break;case 'squad-new':newSquad();break;case 'squad-cancel-new':ui.squadDraft=null;ui.squadPick=null;ui.opPending=null;render();break;case 'squad-discard':ui.squadDraft=null;ui.squadPick=null;render();break;case 'squad-delete':deleteSquad(agentId);break;case 'project-export':exportProject(agentId);break;case 'fe-send':if(chatNow()?.kind==='agent')sendAgentChat();else sendFeatureChat();break;case 'fe-quick':sendFeatureChat(control.dataset.text);break;case 'fe-stop':{const k=chatNow()?.kind;if(k==='agent')agentChatStop();else if(k==='doc')docChatStop();else if(k==='idea')ideaChatStop();else featureChatStop();break;}case 'agent-teams':event.preventDefault();openAgentTeams();break;case 'teams-mention':teamsMentionInsert(control.dataset.name);break;case 'teams-mention-pick':teamsMentionPick(control.dataset.name);break;case 'teams-tab':teamsTab(control.dataset.tab);break;case 'teams-agenda':teamsAgendaOpen(control.dataset.field);break;case 'teams-unshare':if(ui.docChat){ui.docChat.sharing=null;teamsSync();}break;case 'teams-leave':teamsLeave();break;case 'teams-leave-now':closeModal();break;case 'teams-stay':{const b=$('#atConfirm');if(b)b.hidden=true;$('#feChatInput')?.focus();break;}case 'teams-save-leave':$('#docForm')?.requestSubmit();break;case 'fe-undo':undoCoWrite(control.dataset.mid);break;case 'fe-jump':feScroll($('#feMsgs'),true);break;case 'fe-retry':retryCoWrite(control.dataset.mid);break;case 'ac-opt':agentChatChoose(control.dataset.mid,control.dataset.opt,control.dataset.arg||'');break;case 'fe-field':{if(ui.modal==='teams')teamsTab('docs');const el=document.getElementById(FE_FIELD_ID[control.dataset.field]),t=el?.closest('.fe-md')||el;if(t){t.classList.remove('collapsed');t.scrollIntoView({block:'nearest',behavior:'smooth'});t.classList.remove('fe-updated');void t.offsetWidth;t.classList.add('fe-updated');setTimeout(()=>t.classList.remove('fe-updated'),1400);}break;}case 'fe-collapse':{const sec=control.closest('.fe-md'),closed=sec.classList.toggle('collapsed');control.setAttribute('aria-expanded',String(!closed));break;}case 'fe-md-mode':feMdMode(control.closest('.fe-md'),control.dataset.mode);break;case 'fe-md-open':feMdMode(control.closest('.fe-md'),'edit');break;case 'fe-md-tool':feMdTool(control.closest('.fe-md')?.querySelector('.fe-area'),control.dataset.tool);break;case 'adr-add':{const list=control.closest('form')?.querySelector('.adr-list')||$('#adrList');if(list){list.insertAdjacentHTML('beforeend',adrBlockHTML({id:id('adr'),title:'',status:'Proposto',content:ADR_SKELETON},list.children.length));renumberAdrs(list);list.lastElementChild.querySelector('[name=adrTitle]').focus();}teamsSync();break;}case 'adr-remove':{const list=control.closest('.adr-list');control.closest('.adr-block')?.remove();renumberAdrs(list);teamsSync();break;}case 'sq-pick':openPick(control.dataset.slot,control.dataset.index);break;case 'sq-move':moveCursor(Number(control.dataset.dir)||1);break;case 'sq-cursor':clickPickItem(Number(control.dataset.i)||0);break;case 'sq-confirm':confirmPick();break;case 'sq-remove':removeOperator();break;case 'sq-more':pickMore();break;case 'sq-back':pickBack();break;case 'sq-node-view':state.settings.squadNodes=control.dataset.view==='photo'?'photo':'icon';save();render();break;case 'sq-close':ui.squadPick=null;render();break;case 'ops-feature-close':ui.opsFeature=null;ui.opsFeatureDraft=null;render();break;case 'ops-feat-view':ui.opsFeatView=control.dataset.view==='board'?'board':'list';render();break;case 'ops-plan-discard':ui.opsPlan=null;render();break;case 'ops-select':ui.opsFeature=null;ui.opsFeatureDraft=null;ui.opsPlan=null;switchProject(agentId,true);break;case 'ops-cancel-new':ui.opsNew=null;render();break;case 'ops-open-squad':goView('network');MapNetwork.home();break;case 'project-new':openProjectEditor();break;case 'op-new-existing':opNewPickStep();break;case 'op-new-squad':opNewNewSquad();break;case 'op-new-back':openOpNew(ui.opNew?.name,ui.opNew?.ideaId);break;case 'op-new-back-squad':opNewSquadStep();break;case 'project-edit':openProjectEditor(agentId);break;case 'project-switch':switchProject(agentId);break;case 'project-delete':deleteProject(agentId);break;case 'briefing':openBriefing();break;
   case 'features':openFeatures();break;case 'feature-new':openFeatureEditor(null,control.dataset.sprint);break;case 'feature-run':startRun({featureId:agentId});break;case 'sprint-run':startRun({sprintId:agentId});break;case 'sprint-new':openSprintEditor();break;case 'sprint-edit':openSprintEditor(agentId);break;case 'sprint-delete':deleteSprint(agentId);break;case 'sprint-toggle':{const s=sprintById(agentId);if(s){const open=control.getAttribute('aria-expanded')==='true';setSprintOpen(s.id,!open);render();}break;}case 'feature-open':openFeature(agentId);break;case 'feature-delete':deleteFeature(agentId);break;
   case 'feature-approve':approveFeature(agentId,true);break;case 'feature-rework':approveFeature(agentId,false);break;
   case 'distribute':openDistribution();break;case 'plan-apply':applyPlan(control.dataset.run==='1');break;
@@ -3180,7 +3302,7 @@ document.addEventListener('input',event=>{if(event.target.id==='convSearch'){con
 document.addEventListener('change',event=>{if(event.target.id==='convTemplateSelect')convApplyValue(event.target.value);else if(event.target.id==='agentSpecialty'&&ui.draft?.kind==='agent')syncConvFamily();});
 // Subset search menu keyboard: arrows move, Enter adds, Esc closes only the menu (not the agent studio).
 // Feature editor: textareas grow with the content, Enter sends to the co-writer (Shift+Enter breaks the line), dependency summary.
-document.addEventListener('input',event=>{const t=event.target;if(t.classList?.contains('fe-area')||t.id==='feChatInput')autoGrow(t);if(t.id==='feChatInput')feSendState();if(ui.modal==='teams'&&(t.id==='feChatInput'||t.closest?.('#docForm')))teamsSync();if(ui.modal==='teams'&&t.id==='feChatInput')teamsMentionMenu();const sec=t.closest?.('.fe-md');if(sec&&t.classList.contains('fe-area'))sec.querySelector('.fe-md-count').textContent=feCount(sec.dataset.field,t.value);});
+document.addEventListener('input',event=>{const t=event.target;if(t.classList?.contains('fe-area')||t.id==='feChatInput')autoGrow(t);if(t.id==='feChatInput')feSendState();if(ui.modal==='teams'&&(t.id==='feChatInput'||t.closest?.('#docForm')))teamsSync();if(ui.modal==='teams'&&t.id==='feChatInput')teamsMentionMenu();const sec=t.closest?.('.fe-md');if(ui.modal==='ideas'&&t.closest?.('#ideaForm'))ideaDirty();if(sec&&t.classList.contains('fe-area'))sec.querySelector('.fe-md-count').textContent=feCount(sec.dataset.field,t.value);});
 document.addEventListener('focusout',event=>{const t=event.target;if(!t.classList?.contains('fe-area'))return;const sec=t.closest('.fe-md');if(!sec||sec.contains(event.relatedTarget))return;if(t.value.trim())feMdMode(sec,'view');});
 document.addEventListener('mousedown',event=>{if(event.target.closest?.('.fe-md-tools button'))event.preventDefault();});
 document.addEventListener('change',event=>{if(ui.draft?.kind==='agent'&&(event.target.id==='agentModel'||event.target.name==='effort'))syncEffortField();});
@@ -3206,7 +3328,7 @@ document.addEventListener('keydown',event=>{if(event.target.id!=='convSearch')re
  if(k==='ArrowDown'||k==='ArrowUp'){event.preventDefault();convCursor=Math.max(0,Math.min(convFlat.length-1,convCursor+(k==='ArrowDown'?1:-1)));markConvCursor();}
  else if(k==='Enter'){event.preventDefault();const src=convFlat[convCursor];if(src)convAddSubset(src);}
  else if(k==='Escape'){event.preventDefault();event.stopImmediatePropagation();toggleConvPicker(false);$('#convAddBtn')?.focus();}},true);
-document.addEventListener('submit',event=>{if(!event.target.matches('#agentForm,#projectForm,#featureForm,#docForm,#sprintForm,#spawnForm,#handoffForm,#runtimeForm,#squadForm,#opNewForm,#opNewSquadForm,#dbSetupForm'))return;event.preventDefault();const form=event.target;({dbSetupForm:dbSetupFresh,agentForm:saveAgent,projectForm:saveProject,featureForm:saveFeature,docForm:saveProjectDoc,sprintForm:saveSprint,spawnForm:spawnAgent,handoffForm:saveHandoff,runtimeForm:saveRuntime,squadForm:()=>saveSquad(),opNewForm:opNewNext,opNewSquadForm:opNewCreate})[form.id](form);});
+document.addEventListener('submit',event=>{if(!event.target.matches('#agentForm,#projectForm,#featureForm,#docForm,#sprintForm,#spawnForm,#handoffForm,#runtimeForm,#squadForm,#opNewForm,#opNewSquadForm,#dbSetupForm,#ideaForm'))return;event.preventDefault();const form=event.target;({ideaForm:ideaPersist,dbSetupForm:dbSetupFresh,agentForm:saveAgent,projectForm:saveProject,featureForm:saveFeature,docForm:saveProjectDoc,sprintForm:saveSprint,spawnForm:spawnAgent,handoffForm:saveHandoff,runtimeForm:saveRuntime,squadForm:()=>saveSquad(),opNewForm:opNewNext,opNewSquadForm:opNewCreate})[form.id](form);});
 // Dragging a feature row onto another sprint accordion moves it there, keeping its route and status.
 let dragFeatureId=null;
 function dragEnd(){dragFeatureId=null;$$('#opsFeatureList .dragging,#opsFeatureList .drop').forEach(x=>x.classList.remove('dragging','drop'));}

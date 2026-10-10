@@ -28,7 +28,7 @@ const ROOM_MAX = 800;
 const CHAT_MAX = 300;
 const KEEP_RUNS = 300;
 const REF_RE = /^[A-Za-z0-9_-]{1,100}$/;
-const CHAT_KEY_RE = { feature: REF_RE, agent: REF_RE, doc: /^[A-Za-z0-9_:+-]{1,800}$/ };
+const CHAT_KEY_RE = { feature: REF_RE, agent: REF_RE, idea: REF_RE, doc: /^[A-Za-z0-9_:+-]{1,800}$/ };
 const ROOM_KINDS = new Set(['system', 'say', 'call', 'baton', 'plan', 'review']);
 const RUN_KINDS = new Set(['step', 'plan', 'chat', 'cowrite', 'doc', 'spawn']);
 
@@ -48,6 +48,7 @@ const TREE = { table: 'workspace', children: [
     { key: 'logs', table: 'logs', cols: { at: '$.at', type: '$.type', agent_id: '$.agentId', message: '$.message' } },
     { key: 'handoffs', table: 'handoffs', cols: { at: '$.at', from_id: '$.from', to_id: '$.to', feature_id: '$.featureId' } },
   ] },
+  { key: 'ideas', table: 'ideas', cols: { name: '$.name', project_id: '$.projectId' } },
 ] };
 const SPECS = [];
 (function link(spec) { for (const c of spec.children || []) { c.parent = spec; SPECS.push(c); link(c); } })(TREE);
@@ -103,16 +104,17 @@ function checkWorkspace(ws) {
   if (!isObj(ws) || ws.version !== 2 || !Array.isArray(ws.agents) || !Array.isArray(ws.projects) || !ws.projects.length) throw bad('Workspace inválido. Esperado um workspace SQUAD CODE v2.');
 }
 
-function schema() {
-  const entity = spec => {
-    const gen = Object.entries(spec.cols || {}).map(([c, p]) => `,\n  ${c} GENERATED ALWAYS AS (json_extract(data, '${p}')) VIRTUAL`).join('');
-    return `CREATE TABLE ${spec.table} (
+function entity(spec) {
+  const gen = Object.entries(spec.cols || {}).map(([c, p]) => `,\n  ${c} GENERATED ALWAYS AS (json_extract(data, '${p}')) VIRTUAL`).join('');
+  return `CREATE TABLE ${spec.table} (
   rid INTEGER PRIMARY KEY,
   parent_rid INTEGER NOT NULL REFERENCES ${spec.parent.table}(rid) ON DELETE CASCADE,
   key TEXT NOT NULL, pos INTEGER NOT NULL, h TEXT NOT NULL, data TEXT NOT NULL${gen},
   UNIQUE (parent_rid, key)
 );`;
-  };
+}
+
+function schema() {
   return `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE workspace (
@@ -150,7 +152,9 @@ function openStore(dataDir) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');
-  if (db.pragma('user_version', { simple: true }) < 1) db.transaction(() => { db.exec(schema()); db.pragma('user_version = 1'); })();
+  const version = db.pragma('user_version', { simple: true });
+  if (version < 1) db.transaction(() => { db.exec(schema()); db.pragma('user_version = 2'); })();
+  else if (version < 2) db.transaction(() => { db.exec(entity(SPECS.find(s => s.table === 'ideas'))); db.pragma('user_version = 2'); })(); // v2: ideas (Incubadora)
 
   const q = {
     metaGet: db.prepare('SELECT value FROM meta WHERE key = ?').pluck(),
@@ -349,7 +353,7 @@ function openStore(dataDir) {
   }
   function deleteChat(kind, key) { q.chatDelete.run(kind, key); return { ok: true }; }
   function loadChats() {
-    const out = { feature: {}, agent: {}, doc: {} };
+    const out = { feature: {}, agent: {}, idea: {}, doc: {} };
     for (const r of q.chatAll.all()) if (out[r.kind]) { try { out[r.kind][r.key] = JSON.parse(r.data); } catch {} }
     return out;
   }
@@ -358,7 +362,7 @@ function openStore(dataDir) {
   function sweep() {
     if (!q.root.get()) return;
     db.transaction(() => {
-      db.prepare(`DELETE FROM chats WHERE (kind = 'feature' AND ref_id NOT IN (SELECT key FROM features)) OR (kind = 'agent' AND ref_id NOT IN (SELECT key FROM agents)) OR (kind = 'doc' AND project_id NOT IN (SELECT key FROM projects))`).run();
+      db.prepare(`DELETE FROM chats WHERE (kind = 'feature' AND ref_id NOT IN (SELECT key FROM features)) OR (kind = 'agent' AND ref_id NOT IN (SELECT key FROM agents)) OR (kind = 'idea' AND ref_id NOT IN (SELECT key FROM ideas)) OR (kind = 'doc' AND project_id NOT IN (SELECT key FROM projects))`).run();
       db.prepare('DELETE FROM room_messages WHERE project_id NOT IN (SELECT key FROM projects)').run();
       db.prepare('DELETE FROM room_state WHERE project_id NOT IN (SELECT key FROM projects)').run();
     })();
