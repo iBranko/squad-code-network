@@ -201,7 +201,8 @@ with id `agent-catalyst`, never in a squad) brainstorms a raw idea into a produc
 createdAt,updatedAt,doc}`, `doc` keys = `IDEA_FIELDS`/`ideaKeys()`, a hoisted function because `normalizeWorkspace` runs first) is in
 `normalizeWorkspace`, `seedWorkspace` and `TREE` (`ideas` table, `user_version` 2 migration). The chat is the fourth co-writing kind,
 `idea` (`ui.ideaChat`, memory `ui.ideaChats`, `/api/chats/idea/<id>`, swept when the idea is gone), modal kind `ideas` (`openIdea`),
-runs in the `incubadora` project folder with a null projectId. Autosave `ideaDirty`/`ideaPersist`; `.md` export `ideaExport`.
+runs in the `incubadora` project folder with a null projectId. Its header has a model/effort selector (`ideaTuneHTML`, `ideaTune`) saved on
+CATALYST; the idea chat uses `ideaRuntime()` (global model/effort ignored), other runs keep the global override. Autosave `ideaDirty`/`ideaPersist`; `.md` export `ideaExport`.
 **Criar operação** (`ideaToOperation`) goes through the `op-new` wizard carrying `ideaId`; `createOperation` then calls
 `ideaApplyToProject` (briefing, vision, scopeIn/Out, glossary) and sets `idea.projectId`. The roadmap is high level (MVP→V1→V2);
 sprints and features stay with the PRD agents and the commander.

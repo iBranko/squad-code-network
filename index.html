@@ -989,7 +989,8 @@ body:has(#modalRoot .overlay) #sqPopRoot{visibility:hidden}
 .fe-chat-head{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid #ffffff12}
 .fe-chat-head img{width:40px;height:40px;object-fit:cover;border-radius:50%;border:1px solid #30c5e866;filter:grayscale(.3)}
 .fe-chat-head strong{display:block;font:600 13px var(--sans)}
-.fe-chat-head small{font:8px var(--mono);letter-spacing:1.3px;color:var(--cyan)}@media (max-width:900px){.modal.feature-editor{height:auto}.feature-editor .modal-body{overflow:auto;display:block}.fe-layout{grid-template-columns:1fr}.fe-form{overflow:visible}.fe-chat{border-left:0;border-top:1px solid #ffffff14}}
+.fe-chat-head small{font:8px var(--mono);letter-spacing:1.3px;color:var(--cyan)}
+.fe-chat-head:has(.idea-tune){flex-wrap:wrap}.idea-tune{flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}.idea-tune label{display:grid;gap:4px;font:8px var(--mono);letter-spacing:1.3px;color:var(--cyan)}.idea-tune select{font:12px var(--sans);letter-spacing:0;padding:6px 8px;background:#0b1118;color:inherit;border:1px solid #ffffff22;border-radius:6px;min-width:0}.idea-tune select:disabled{opacity:.5}.fe-chat-head .idea-tune small{grid-column:1/-1;font:11px/1.4 var(--sans);letter-spacing:0;color:#9aa7b4}@media (max-width:900px){.modal.feature-editor{height:auto}.feature-editor .modal-body{overflow:auto;display:block}.fe-layout{grid-template-columns:1fr}.fe-form{overflow:visible}.fe-chat{border-left:0;border-top:1px solid #ffffff14}}
 @media (max-width:640px){.fe-form{padding:18px 16px}.fe-title{font-size:18px}}
 /* Feature editor: Markdown blocks (view like the DIRETRIZES preview / edit the source), collapsible; model chip. */
 .fe-md{margin-top:12px;border:1px solid #ffffff12;background:#070b0d;transition:border-color .3s,box-shadow .5s}
@@ -11588,7 +11589,7 @@ function setFeField(field,value,opts={}){
   setTimeout(()=>{view.classList.remove('fe-writing');sec.querySelector('.fe-agent-badge')?.remove();},900+70*parts.length);sec.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
 // Effective co-writing model: same rule as runOptionsFor (global runtime model > agent model > Claude Code default).
-function coWriterModel(a){const global=runtime().model||'',own=a?.model&&a.model!=='inherit'?a.model:'',m=global||own,x=agentEffort(a);
+function coWriterModel(a,r=runtime()){const global=r.model||'',own=a?.model&&a.model!=='inherit'?a.model:'',m=global||own,x=agentEffort(a,r);
  const mt=global?`Modelo global definido nas configurações do Claude Code${own&&own!==global?` (substitui o do agente: ${modelLabel(own)})`:''}.`:own?'Modelo definido no estúdio do agente.':'Sem modelo definido: usa o padrão do Claude Code.';
  // Effort gets its own chip (effortChipHTML); with no level set it shows the model's default, which is what the run uses.
  const lvl=x.effort||(m?modelDefaultEffort(m):''),effort=x.source==='none'?null:{level:lvl,source:x.source,label:lvl?EFFORT_INFO[lvl]?.[0]||lvl.toUpperCase():'PADRÃO',
@@ -11609,7 +11610,7 @@ function coWriteRoleTag(a){return a?.id===IDEA_AGENT_ID?'ESTRATEGISTA DE PRODUTO
 function feChatHTML(a,model,live,opts={}){
  const name=E(a?.name||opts.none||'SEM AGENTE PRD'),send='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>';
  // Header unchanged (avatar, name + model chip, role); only the conversation below follows the iMessage style.
- return`<aside class="fe-chat" aria-label="Conversa com ${name}"><header class="fe-chat-head">${a?`<img src="${portrait(a)}" alt="">`:''}<div><div class="fe-chat-id"><strong>${name}</strong>${a?`<span class="fe-model" title="${E(model.title)}">${E(model.label)}</span>${effortChipHTML(model.effort)}`:''}</div><small>CO-ESCRITA · ${E(coWriteRoleTag(a))}</small></div></header>
+ return`<aside class="fe-chat" aria-label="Conversa com ${name}"><header class="fe-chat-head">${a?`<img src="${portrait(a)}" alt="">`:''}<div><div class="fe-chat-id"><strong>${name}</strong>${a?`<span class="fe-model" title="${E(model.title)}">${E(model.label)}</span>${effortChipHTML(model.effort)}`:''}</div><small>CO-ESCRITA · ${E(coWriteRoleTag(a))}</small></div>${a?opts.tune||'':''}</header>
 <div class="fe-msgs" id="feMsgs" aria-live="polite"></div><button type="button" class="fe-jump" id="feJump" data-action="fe-jump" hidden>Nova mensagem ↓</button>
 ${live&&a?`<div class="fe-compose"><div class="fe-suggest" id="feSuggest">${(opts.quick||FE_QUICK).map(([l,t])=>`<button type="button" data-action="fe-quick" data-text="${E(t)}">${l}</button>`).join('')}</div><div class="fe-pill"><textarea id="feChatInput" rows="1" maxlength="4000" placeholder="Mensagem para ${name}" aria-label="Mensagem para ${name}"></textarea><button type="button" class="fe-send" data-action="fe-send" aria-label="Enviar" title="Enviar (Enter)" disabled>${send}</button></div></div>`:`<div class="fe-compose offline"><p class="fe-note">${a?'A conversa usa o Claude Code pelo bridge. Rode <code>npm start</code> e abra <code>http://127.0.0.1:4317</code> com a execução ligada. O formulário funciona normalmente sem ele.':E(opts.missing||'A squad desta operação não tem agente PRD.')}</p></div>`}</aside>`;
 }
@@ -11752,7 +11753,7 @@ async function runCoWrite(msgs){
    const turn={i,crew,round};
    try{
     // Chat runs: no tools and no plan mode (its planning flow slowed replies and made the model fake tool calls); text streams live.
-    const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:idea?ideaPrompt(a,c,msgs):doc?docCoWritePrompt(a,c,msgs,turn):coWritePrompt(a,msgs),systemPrompt:agentSystemPrompt(a)+'\n\n'+[soulBlock(a,chatGreeting(c,a)),idea?IDEA_SYSTEM:doc?docCoWriteSystem(doc,a,c,turn):COWRITE_SYSTEM].filter(Boolean).join('\n\n'),label:idea?`${a.name} / incubadora de ideias`:doc?`${a.name} / co-escrita ${doc.title.toLowerCase()}`:`${a.name} / co-escrita ${ui.opsFeatureDraft?.feature.key||''}`,meta:runMeta(idea||(doc&&ui.opsNew)?null:project(),a,doc||idea?null:ui.opsFeatureDraft?.feature,doc?'doc':'cowrite'),options:{...runOptionsFor(a,runtime(),idea?{folder:IDEA_FOLDER}:doc&&ui.opsNew?null:project()),...CHAT_RUN}})});
+    const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:idea?ideaPrompt(a,c,msgs):doc?docCoWritePrompt(a,c,msgs,turn):coWritePrompt(a,msgs),systemPrompt:agentSystemPrompt(a)+'\n\n'+[soulBlock(a,chatGreeting(c,a)),idea?IDEA_SYSTEM:doc?docCoWriteSystem(doc,a,c,turn):COWRITE_SYSTEM].filter(Boolean).join('\n\n'),label:idea?`${a.name} / incubadora de ideias`:doc?`${a.name} / co-escrita ${doc.title.toLowerCase()}`:`${a.name} / co-escrita ${ui.opsFeatureDraft?.feature.key||''}`,meta:runMeta(idea||(doc&&ui.opsNew)?null:project(),a,doc||idea?null:ui.opsFeatureDraft?.feature,doc?'doc':'cowrite'),options:{...runOptionsFor(a,idea?ideaRuntime():runtime(),idea?{folder:IDEA_FOLDER}:doc&&ui.opsNew?null:project()),...CHAT_RUN}})});
     if(!mine()){bridgeFetch(`/api/runs/${started.runId}/cancel`,{method:'POST'}).catch(()=>{});return;}
     c.runId=started.runId;c.read=true;chatReceipt();chatTyping(true);
     // The tile goes from "pensando" to "falando" with the first words; a screen still shared by a colleague goes back to the gallery.
@@ -11853,8 +11854,22 @@ function ensureIdeaAgent(){
 function newIdeaChat(ideaId){const saved=ui.ideaChats?.[ideaId],a=ideaAgent();return{kind:'idea',ideaId,agentId:a?.id||null,greeting:saved?.greeting||feGreeting(a,'Oi! Me conta a ideia, mesmo que esteja crua. A gente testa, lapida e transforma em produto.'),messages:saved?saved.messages.map(m=>({...m})):[],seq:saved?.seq||0,queue:[],busy:false,runId:null,started:0,token:null,read:false,opened:Date.now()};}
 function ideaHTML(idea){
  const a=ideaAgent();
- return`<div class="fe-layout"><form id="ideaForm" class="fe-form" novalidate><input id="ideaName" class="fe-title" name="name" value="${E(idea.name)}" maxlength="80" placeholder="Nome da ideia" autocomplete="off" aria-label="Nome da ideia"><p class="hint doc-hint">O documento é salvo sozinho. Converse com ${E(a?.name||'o agente')} ao lado: ele preenche as seções e você ajusta o que quiser. Quando estiver pronto, <b>Criar operação</b> leva o briefing, a visão, o escopo e o glossário para a squad.</p>${IDEA_FIELDS.map(def=>feMdFieldHTML(def,idea.doc[def.field]||'')).join('')}</form>${feChatHTML(a,coWriterModel(a),liveMode(),{quick:IDEA_QUICK,none:'SEM AGENTE'})}</div>`;
+ return`<div class="fe-layout"><form id="ideaForm" class="fe-form" novalidate><input id="ideaName" class="fe-title" name="name" value="${E(idea.name)}" maxlength="80" placeholder="Nome da ideia" autocomplete="off" aria-label="Nome da ideia"><p class="hint doc-hint">O documento é salvo sozinho. Converse com ${E(a?.name||'o agente')} ao lado: ele preenche as seções e você ajusta o que quiser. Quando estiver pronto, <b>Criar operação</b> leva o briefing, a visão, o escopo e o glossário para a squad.</p>${IDEA_FIELDS.map(def=>feMdFieldHTML(def,idea.doc[def.field]||'')).join('')}</form> ${feChatHTML(a,coWriterModel(a,ideaRuntime()),liveMode(),{quick:IDEA_QUICK,none:'SEM AGENTE',tune:ideaTuneHTML(a)})}</div>`;
 }
+ // The Incubadora's own model/effort (saved on CATALYST) wins over the global runtime override, which only the other runs follow.
+ function ideaRuntime(){return{...runtime(),model:'',effort:''};}
+ function ideaTuneHTML(a){
+  if(!a)return'';const r=runtime(),ok=modelEffortSupport(a.model),cur=ok&&EFFORTS.includes(a.effort)?a.effort:'',custom=modelInfo(a.model)?'':`<option value="${E(a.model)}" selected>${E(a.model)} (personalizado)</option>`,g=[r.model&&`modelo ${r.model}`,r.effort&&`esforço ${r.effort}`].filter(Boolean).join(' e ');
+  return`<div class="idea-tune"><label>MODELO<select id="ideaTuneModel" aria-label="Modelo do ${E(a.name)}">${custom}${CLAUDE_MODELS.map(([gr,items])=>`<optgroup label="${E(gr)}">${items.map(([id,label])=>`<option value="${E(id)}" ${a.model===id?'selected':''}>${E(label)}</option>`).join('')}</optgroup>`).join('')}</select></label><label>ESFORÇO<select id="ideaTuneEffort" aria-label="Esforço do ${E(a.name)}" ${ok?'':'disabled'}>${EFFORTS.map(e=>`<option value="${e}" ${cur===e?'selected':''}>${e?E(EFFORT_INFO[e][0]):'Padrão do modelo'}</option>`).join('')}</select></label><small>${E(effortHint(a.model,cur).replace(/ Hoje o esforço global.*$/,''))} Vale na próxima mensagem e para todas as ideias.${g?` O ${g} das configurações não se aplica aqui.`:''}</small></div>`;
+ }
+ function ideaTune(){
+  const a=ideaAgent(),m=$('#ideaTuneModel'),e=$('#ideaTuneEffort');if(!a||!m||!e)return;
+  const focus=document.activeElement?.id;a.model=m.value;a.effort=modelEffortSupport(a.model)&&EFFORTS.includes(e.value)?e.value:'';save();
+  const head=$('.fe-chat-head'),x=coWriterModel(a,ideaRuntime());if(!head)return;
+  head.querySelector('.fe-chat-id').innerHTML=`<strong>${E(a.name)}</strong><span class="fe-model" title="${E(x.title)}">${E(x.label)}</span>${effortChipHTML(x.effort)}`;
+  head.querySelector('.idea-tune')?.replaceWith(Object.assign(document.createElement('div'),{innerHTML:ideaTuneHTML(a)}).firstElementChild);
+  if(focus)$('#'+focus)?.focus();
+ }
 function openIdea(ideaId){
  if(!liveMode())return toast('A Incubadora usa o Claude Code real: rode npm start e abra http://127.0.0.1:4317 com a execução ligada.','error');
  const idea=ideaById(ideaId);if(!idea)return;if(!ensureIdeaAgent())return;
@@ -13671,6 +13686,7 @@ document.addEventListener('dblclick',event=>{if(event.target.closest?.('#atSplit
 document.addEventListener('keydown',event=>{if(event.target.id==='atSplit')teamsSplitKey(event);else if(event.target.id==='ocSplit')opsChatSplitKey(event);});
 document.addEventListener('change',event=>{if(event.target.name==='dependencies'&&event.target.closest('#featureForm.fe-form')){const keys=[...document.querySelectorAll('#featureForm [name=dependencies]:checked')].map(x=>featureById(x.value)?.key).filter(Boolean),el=$('#feDepSummary');if(el)el.textContent=keys.join(', ')||'nenhuma';}});
 document.addEventListener('change',event=>{if(event.target.name==='squadId'&&event.target.closest('#projectForm'))refreshDocAgents();});
+document.addEventListener('change',event=>{if(event.target.id==='ideaTuneModel'||event.target.id==='ideaTuneEffort')ideaTune();});
 document.addEventListener('keydown',event=>{if(event.target.id!=='convSearch')return;const k=event.key;
  if(k==='ArrowDown'||k==='ArrowUp'){event.preventDefault();convCursor=Math.max(0,Math.min(convFlat.length-1,convCursor+(k==='ArrowDown'?1:-1)));markConvCursor();}
  else if(k==='Enter'){event.preventDefault();const src=convFlat[convCursor];if(src)convAddSubset(src);}

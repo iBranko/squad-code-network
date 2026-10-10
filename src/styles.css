@@ -976,7 +976,8 @@ body:has(#modalRoot .overlay) #sqPopRoot{visibility:hidden}
 .fe-chat-head{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid #ffffff12}
 .fe-chat-head img{width:40px;height:40px;object-fit:cover;border-radius:50%;border:1px solid #30c5e866;filter:grayscale(.3)}
 .fe-chat-head strong{display:block;font:600 13px var(--sans)}
-.fe-chat-head small{font:8px var(--mono);letter-spacing:1.3px;color:var(--cyan)}@media (max-width:900px){.modal.feature-editor{height:auto}.feature-editor .modal-body{overflow:auto;display:block}.fe-layout{grid-template-columns:1fr}.fe-form{overflow:visible}.fe-chat{border-left:0;border-top:1px solid #ffffff14}}
+.fe-chat-head small{font:8px var(--mono);letter-spacing:1.3px;color:var(--cyan)}
+.fe-chat-head:has(.idea-tune){flex-wrap:wrap}.idea-tune{flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}.idea-tune label{display:grid;gap:4px;font:8px var(--mono);letter-spacing:1.3px;color:var(--cyan)}.idea-tune select{font:12px var(--sans);letter-spacing:0;padding:6px 8px;background:#0b1118;color:inherit;border:1px solid #ffffff22;border-radius:6px;min-width:0}.idea-tune select:disabled{opacity:.5}.fe-chat-head .idea-tune small{grid-column:1/-1;font:11px/1.4 var(--sans);letter-spacing:0;color:#9aa7b4}@media (max-width:900px){.modal.feature-editor{height:auto}.feature-editor .modal-body{overflow:auto;display:block}.fe-layout{grid-template-columns:1fr}.fe-form{overflow:visible}.fe-chat{border-left:0;border-top:1px solid #ffffff14}}
 @media (max-width:640px){.fe-form{padding:18px 16px}.fe-title{font-size:18px}}
 /* Feature editor: Markdown blocks (view like the DIRETRIZES preview / edit the source), collapsible; model chip. */
 .fe-md{margin-top:12px;border:1px solid #ffffff12;background:#070b0d;transition:border-color .3s,box-shadow .5s}
