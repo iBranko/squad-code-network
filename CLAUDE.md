@@ -262,7 +262,7 @@ asks in `#atConfirm`; the per-item Editar is agent-chat only because `openFeatur
   the questions in the review panel, and **Solicitar ajustes** (`openRework`, modal kind `rework`, `#reworkForm` → `saveRework`)
   shows one textarea per question plus a general note. The answers are stored in `feature.feedback` `{at, verdict, report, items[{q,a}], note}`
   (persisted, `normFeedback`, cleared on approval), the feature goes back to `ready` and `feedbackBlock` injects it into every step prompt
-  of that feature's next run only (not into other features).
+  of that feature's next run only (not into other features). **Aprovar entrega** (`approveReview`) asks for confirmation when the report has open questions or a "changes" verdict.
 - Agents: `ROLES` defines specialties; Squad Studio presets come from `AGENT_PRESETS` and
   `OP_CATEGORIES` (operators picked by category → sub-specialty, generalist first) and are
   materialized by `createPresetAgent`. Each agent has `model` (catalog `CLAUDE_MODELS`: aliases, pinned IDs, `inherit`;
