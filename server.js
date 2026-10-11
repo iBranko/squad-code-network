@@ -512,6 +512,16 @@ async function handle(req, res) {
       if (Number.isInteger(n) && n >= 1 && n <= 8) maxConcurrent = n;
       return json(res, 200, { ok: true, maxConcurrent });
     }
+    // Fixed name only: the Incubadora's full brainstorm goes to <project>/docs/brainstorm.md, where the agents of the run can read it.
+    if (req.method === 'POST' && url.pathname === '/api/project-files/brainstorm') {
+      const body = await readBody(req, 1024 * 1024);
+      const dir = projectDir(body.project), text = typeof body.content === 'string' ? body.content : '';
+      if (!text.trim()) return fail(res, 400, 'Conteúdo vazio.');
+      if (text.length > 400000) return fail(res, 400, 'Brainstorm muito grande.');
+      await fsp.mkdir(path.join(dir, 'docs'), { recursive: true });
+      await fsp.writeFile(path.join(dir, 'docs', 'brainstorm.md'), text, 'utf8');
+      return json(res, 200, { ok: true, path: 'docs/brainstorm.md' });
+    }
     if (url.pathname === '/api/runs' && req.method === 'GET') {
       // The history comes from the database; runs still in memory report their current status.
       if (!store) return json(res, 200, { ok: true, runs: [] });

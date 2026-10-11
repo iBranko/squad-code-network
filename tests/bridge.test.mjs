@@ -262,6 +262,16 @@ test('settings.json read/write with backup (user and project scope)', async () =
   assert.equal(res.status, 400);
 });
 
+test('the brainstorm is saved as docs/brainstorm.md inside the project folder only', async () => {
+  const folder = 'op-003-ideia', file = path.join(projectsRoot, folder, 'docs', 'brainstorm.md');
+  const content = '# Ideia\n\n' + 'x'.repeat(5000);
+  let res = await api('/api/project-files/brainstorm', { method: 'POST', body: JSON.stringify({ project: folder, content }) });
+  assert.equal(res.status, 200);
+  assert.equal(readFileSync(file, 'utf8'), content);
+  assert.equal((await api('/api/project-files/brainstorm', { method: 'POST', body: JSON.stringify({ project: '../x', content }) })).status, 400);
+  assert.equal((await api('/api/project-files/brainstorm', { method: 'POST', body: JSON.stringify({ project: folder, content: '  ' }) })).status, 400);
+});
+
 test('workspace is saved in SQLite, injected into the page and guarded against stale writes', async () => {
   // No database yet: the page is told to ask how to start, and nothing reaches the disk before that.
   let tag = pageTag(await page(), 'squad-disk');

@@ -989,6 +989,7 @@ body:has(#modalRoot .overlay) #sqPopRoot{visibility:hidden}
 .fe-chev{width:6px;height:6px;flex-shrink:0;align-self:center;border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
 .fe-md.collapsed .fe-chev{transform:rotate(-45deg)}
 .fe-md-count{margin-left:auto;font:8px var(--mono);font-style:normal;letter-spacing:1px;color:var(--dim);text-transform:uppercase;white-space:nowrap}
+.fe-md.at-limit .fe-md-count{color:#ffb454}
 .fe-md-modes{display:inline-flex;border:1px solid #ffffff1a;flex-shrink:0}
 .fe-md-modes button{background:none;border:0;color:var(--muted);font:8px var(--mono);letter-spacing:1px;padding:4px 8px;cursor:pointer;text-transform:uppercase}
 .fe-md-modes button.on{background:#12303a;color:var(--ink)}

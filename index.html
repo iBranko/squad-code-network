@@ -1002,6 +1002,7 @@ body:has(#modalRoot .overlay) #sqPopRoot{visibility:hidden}
 .fe-chev{width:6px;height:6px;flex-shrink:0;align-self:center;border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
 .fe-md.collapsed .fe-chev{transform:rotate(-45deg)}
 .fe-md-count{margin-left:auto;font:8px var(--mono);font-style:normal;letter-spacing:1px;color:var(--dim);text-transform:uppercase;white-space:nowrap}
+.fe-md.at-limit .fe-md-count{color:#ffb454}
 .fe-md-modes{display:inline-flex;border:1px solid #ffffff1a;flex-shrink:0}
 .fe-md-modes button{background:none;border:0;color:var(--muted);font:8px var(--mono);letter-spacing:1px;padding:4px 8px;cursor:pointer;text-transform:uppercase}
 .fe-md-modes button.on{background:#12303a;color:var(--ink)}
@@ -11910,15 +11911,17 @@ function ideaPrompt(a,c,msgs){
  return[`# Incubadora de ideias · ${val('ideaName')||'Nova ideia'}`,`## Documento de produto agora (a pessoa pode ter editado)\n${IDEA_FIELDS.map(f=>`### ${f.label}\n${val(f.id)||'(vazio)'}`).join('\n\n')}`,history?`## Conversa até aqui\n${history}`:'',`## ${msgs.length>1?'Novas mensagens':'Nova mensagem'} da pessoa\n${msgs.map(m=>m.text).join('\n\n')}`].filter(Boolean).join('\n\n');
 }
 async function applyIdeaWrite(result,cost,meta={}){
- const c=ui.ideaChat;if(!c)return null;const {reply,data}=parseCoWrite(result),changes=[];
+ const c=ui.ideaChat;if(!c)return null;const {reply,data}=parseCoWrite(result),changes=[],cut=[];
  const item=x=>x&&typeof x==='object'?[x.term??x.termo??x.title??x.name,x.definition??x.definicao??x.description].filter(Boolean).join(': '):String(x??'');
  const lines=v=>(Array.isArray(v)?v.map(item):String(v??'').split('\n')).map(x=>x.trim().replace(/^(?:[-*•]|\d+[.)])\s+/,'')).filter(Boolean).join('\n');
  if(data&&typeof data==='object'){
   const nm=typeof data.name==='string'?data.name.trim().replace(/\s+/g,' ').slice(0,80):'',nameEl=document.getElementById('ideaName');
   if(nm&&nameEl&&nameEl.value.trim()!==nm)changes.push({field:'name',value:nm});
-  for(const f of IDEA_FIELDS){if(!(f.field in data))continue;const raw=data[f.field],v=f.list?lines(raw):Array.isArray(raw)?raw.map(item).join('\n').trim():typeof raw==='string'?raw.trim():null,el=document.getElementById(f.id);if(v===null||!el||el.value.trim()===v)continue;changes.push({field:f.field,value:v.slice(0,f.max)});}
+  for(const f of IDEA_FIELDS){if(!(f.field in data))continue;const raw=data[f.field],v=f.list?lines(raw):Array.isArray(raw)?raw.map(item).join('\n').trim():typeof raw==='string'?raw.trim():null,el=document.getElementById(f.id);if(v===null||!el||el.value.trim()===v)continue;  if(v.length>f.max)cut.push(`${f.short} (${v.length.toLocaleString('pt-BR')} de ${f.max.toLocaleString('pt-BR')})`);changes.push({field:f.field,value:v.slice(0,f.max)});}
  }
- const m=await chatApply(c,reply,data,changes,cost,meta);ideaDirty();return m;
+   const m=await chatApply(c,reply,data,changes,cost,meta);ideaDirty();
+   if(cut.length)toast(`Texto cortado no limite da seção: ${cut.join(', ')}. Peça ao agente para resumir.`,'error');
+   return m;
 }
 function ideaMarkdown(idea){
  const body=IDEA_FIELDS.map(f=>{const v=String(idea.doc[f.field]||'').trim();if(!v)return'';return`## ${f.short}\n\n${f.list?v.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>`- ${l}`).join('\n'):v}`;}).filter(Boolean);
@@ -11934,11 +11937,45 @@ function ideaToOperation(){
  const idea=ideaPersist();if(!idea)return;
  if(!String(idea.doc.problema+idea.doc.mvp+idea.doc.propostaValor).trim())return toast('Preencha pelo menos o problema, a proposta de valor ou o MVP antes de criar a operação.','error');
  if(!guardMutation())return;if(state.projects.length>=30)return toast('Limite de 30 projetos por workspace.','error');
- closeModal();ui.opNew={name:idea.name.slice(0,70),ideaId:idea.id};opNewSquadStep();
+ closeModal();if(liveMode()){ideaBriefRun(idea);return;}ui.ideaBrief=null;ui.opNew={name:idea.name.slice(0,70),ideaId:idea.id};opNewSquadStep();
+}
+const BRIEF_MAX=20000;
+function ideaBriefFallback(idea){
+ const d=idea.doc,sec=(t,v)=>String(v||'').trim()?`## ${t}\n${String(v).trim()}`:'';
+ return[`Operação criada a partir da ideia "${idea.name}" (Incubadora de ideias).`,sec('Problema e dor',d.problema),sec('Público e cliente',d.publico),sec('Proposta de valor',d.propostaValor),sec('MVP',d.mvp),sec('Monetização',d.monetizacao),sec('Métricas de sucesso',d.metricas),sec('Riscos e premissas',d.riscos),sec('Roadmap por fases',d.roadmapFases)].filter(Boolean).join('\n\n');
+}
+const IDEA_DISTILL_SYSTEM='Tarefa: reescrever o documento de brainstorm recebido como BRIEFING de projeto, em português, em markdown. Responda só com o briefing, sem comentários nem blocos de código ao redor. Limite: no máximo 18000 caracteres. Mantenha: problema e dor, público em poucas linhas, MVP completo (o que entra e a definição de pronto), restrições, métricas apenas do MVP, riscos que mudam o escopo ou a arquitetura, e do roadmap só o MVP e a próxima fase. Remova: concorrência e análise de mercado, monetização detalhada (no máximo uma linha), riscos genéricos, fases distantes e tudo que repete a visão ou outra seção. Não invente fatos e não perca decisões já tomadas. Termine com uma linha dizendo que o brainstorm completo está em `docs/brainstorm.md`.';
+async function ideaDistill(idea){
+ const a=ideaAgent()||presetByName('CATALYST');if(!a)throw Error('Agente da incubadora indisponível.');
+ const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:`Reescreva este brainstorm como briefing:\n\n${ideaMarkdown(idea)}`,systemPrompt:agentSystemPrompt(a)+'\n\n'+IDEA_DISTILL_SYSTEM,label:`${a.name} / briefing da ideia`,meta:runMeta(null,a,null,'idea'),options:{...runOptionsFor(a,ideaRuntime(),{folder:IDEA_FOLDER}),...CHAT_RUN,partial:false}})});
+ const exit=await streamRun(started.runId,()=>{});
+ if(exit.isError)throw Error(exit.error||'falha na execução do Claude Code.');
+ return String(exit.result||'').trim().replace(/^```(?:markdown|md)?\s*\n/,'').replace(/\n```\s*$/,'');
+}
+function ideaBriefModal(){
+ const b=ui.ideaBrief;if(!b)return;const n=b.text.length;
+ const body=b.busy?`<p class="hint">Reescrevendo o brainstorm como briefing, sem concorrência, sem repetições e dentro do limite. Pode levar um minuto.</p>`:`${b.error?`<p class="hint error">${E(b.error)}</p>`:''}<label class="field"><span>Briefing (revise antes de continuar)</span><textarea id="ideaBriefText" rows="18" maxlength="60000">${E(b.text)}</textarea></label><p class="hint">${n.toLocaleString('pt-BR')} de ${BRIEF_MAX.toLocaleString('pt-BR')} caracteres no máximo. O brainstorm completo vai para <code>docs/brainstorm.md</code> na pasta do projeto.</p>`;
+ showModal('Briefing da operação',E(b.name),body,`<button class="btn" data-action="idea-brief-cancel">Cancelar</button>${b.busy?'':`<button class="btn" data-action="idea-brief-redo">${icon('play')}Reescrever de novo</button><button class="btn primary" data-action="idea-brief-use">Usar este briefing</button>`}`,'','idea-brief');
+}
+async function ideaBriefRun(idea){
+ const b=ui.ideaBrief={ideaId:idea.id,name:idea.name,text:'',busy:true,error:''};ideaBriefModal();
+ try{b.text=await ideaDistill(idea);if(!b.text)throw Error('o agente não devolveu texto.');}
+ catch(e){b.text=ideaBriefFallback(idea);b.error=`Não consegui reescrever (${e.message}). Abaixo está o briefing montado pelas seções; reduza-o manualmente se passar do limite.`;}
+ b.busy=false;if(ui.ideaBrief===b&&ui.modal==='idea-brief')ideaBriefModal();
+}
+function ideaBriefUse(){
+ const b=ui.ideaBrief,el=$('#ideaBriefText');if(!b||!el)return;const text=el.value.trim();
+ if(!text)return toast('O briefing está vazio.','error');
+ if(text.length>BRIEF_MAX){b.text=text;return toast(`O briefing tem ${text.length.toLocaleString('pt-BR')} caracteres e o limite é ${BRIEF_MAX.toLocaleString('pt-BR')}. Reescreva de novo ou reduza o texto.`,'error');}
+ b.final=text;closeModal();ui.opNew={name:b.name.slice(0,70),ideaId:b.ideaId};opNewSquadStep();
+}
+function ideaSaveBrainstorm(idea,p){
+ if(!liveMode()||!p.folder)return;
+ bridgeFetch('/api/project-files/brainstorm',{method:'POST',body:JSON.stringify({project:p.folder,content:ideaMarkdown(idea)})}).catch(()=>toast('Não consegui salvar docs/brainstorm.md na pasta do projeto.','error'));
 }
 function ideaApplyToProject(idea,p){
- const d=idea.doc,sec=(t,v)=>String(v||'').trim()?`## ${t}\n${String(v).trim()}`:'';
- p.briefing=[`Operação criada a partir da ideia "${idea.name}" (Incubadora de ideias).`,sec('Problema e dor',d.problema),sec('Público e cliente',d.publico),sec('Proposta de valor',d.propostaValor),sec('MVP',d.mvp),sec('Monetização',d.monetizacao),sec('Métricas de sucesso',d.metricas),sec('Riscos e premissas',d.riscos),sec('Roadmap por fases',d.roadmapFases)].filter(Boolean).join('\n\n').slice(0,20000);
+ const d=idea.doc,b=ui.ideaBrief;
+ p.briefing=(b?.final&&b.ideaId===idea.id?b.final:ideaBriefFallback(idea)).slice(0,BRIEF_MAX);ui.ideaBrief=null;ideaSaveBrainstorm(idea,p);
  p.vision=[String(d.propostaValor||'').trim(),String(d.publico||'').trim()?`Para quem: ${String(d.publico).trim()}`:'',String(d.concorrencia||'').trim()?`Diferenciais frente às alternativas:\n${String(d.concorrencia).trim()}`:''].filter(Boolean).join('\n\n').slice(0,8000);
  p.scopeIn=String(d.escopoMvp||'').trim().slice(0,8000);p.scopeOut=String(d.foraMvp||'').trim().slice(0,8000);p.glossary=String(d.glossario||'').trim().slice(0,8000);
  idea.projectId=p.id;idea.updatedAt=nowISO();
@@ -13620,7 +13657,7 @@ document.addEventListener('click',event=>{
   case 'view':control.dataset.view==='network'?openSquadView():goView(control.dataset.view);break;case 'squad-view-op':squadViewOp(agentId);break;
   case 'nav-prev':nextView(-1);break;case 'nav-next':nextView(1);break;
   case 'select-agent':{if(MapNetwork.isMoving())MapNetwork.cancelMove();const double=lastSelected.id===agentId&&performance.now()-lastSelected.at<380;lastSelected={id:double?null:agentId,at:performance.now()};ui.actionsFor=agentId;if(double&&ui.view==='network')openAgentChat(agentId);else selectAgent(agentId);break;}
-  case 'agent-new':openAgentEditor();break;case 'idea-new':ideaNew();break;case 'idea-open':openIdea(agentId);break;case 'idea-delete':ideaDelete(agentId);break;case 'idea-export':ideaExport();break;case 'idea-operation':ideaToOperation();break;case 'agent-edit':openAgentEditor(agentId);break;case 'agent-chat':openAgentChat(agentId);break;case 'agent-move':if(MapNetwork.isMoving()===agentId)MapNetwork.cancelMove();else MapNetwork.startMove(agentId);break;case 'agent-pipeline':case 'squad-studio':openSquadStudio();break;
+  case 'agent-new':openAgentEditor();break;case 'idea-new':ideaNew();break;case 'idea-open':openIdea(agentId);break;case 'idea-delete':ideaDelete(agentId);break;case 'idea-export':ideaExport();break;case 'idea-operation':ideaToOperation();break;case 'idea-brief-cancel':ui.ideaBrief=null;closeModal();break;case 'idea-brief-redo':{const i=ideaById(ui.ideaBrief?.ideaId);if(i)ideaBriefRun(i);break;}case 'idea-brief-use':ideaBriefUse();break;case 'agent-edit':openAgentEditor(agentId);break;case 'agent-chat':openAgentChat(agentId);break;case 'agent-move':if(MapNetwork.isMoving()===agentId)MapNetwork.cancelMove();else MapNetwork.startMove(agentId);break;case 'agent-pipeline':case 'squad-studio':openSquadStudio();break;
   case 'agent-duplicate':duplicateAgent(agentId);break;case 'agent-restore':restoreAgentDefaults();break;case 'hello-add':{const list=$('#helloList');if(list&&list.children.length<8){list.insertAdjacentHTML('beforeend',helloRowHTML('',list.children.length));renumberHellos();list.lastElementChild.querySelector('input').focus();}break;}case 'hello-remove':control.closest('.hello-row')?.remove();renumberHellos();break;case 'agent-delete':deleteAgent(agentId);break;case 'agent-export':exportAgent(agentId);break;
   case 'conv-undo':convUndo();break;case 'conv-save-template':convSaveTemplate();break;case 'conv-add-toggle':toggleConvPicker();break;case 'conv-theme':convTheme=convTheme===control.dataset.group?'':control.dataset.group;convCursor=0;renderConvResults();$('#convSearch')?.focus();break;case 'conv-add-subset':convAddSubset(control.dataset.src||'custom');break;case 'conv-sub-remove':control.closest('.conv-subset')?.remove();refreshConvPicker();updateConvPreview();break;case 'conv-sub-save':convSaveSubset(control);break;case 'conv-lib-del-template':convDeleteLibrary('template',control.dataset.id);break;case 'conv-lib-del-subset':convDeleteLibrary('subset',control.dataset.id);break;
   case 'editor-tab':editorTab(control.dataset.tab);break;
@@ -13665,7 +13702,7 @@ document.addEventListener('input',event=>{if(event.target.id==='convSearch'){con
 document.addEventListener('change',event=>{if(event.target.id==='convTemplateSelect')convApplyValue(event.target.value);else if(event.target.id==='agentSpecialty'&&ui.draft?.kind==='agent')syncConvFamily();});
 // Subset search menu keyboard: arrows move, Enter adds, Esc closes only the menu (not the agent studio).
 // Feature editor: textareas grow with the content, Enter sends to the co-writer (Shift+Enter breaks the line), dependency summary.
-document.addEventListener('input',event=>{const t=event.target;if(t.classList?.contains('fe-area')||t.id==='feChatInput')autoGrow(t);if(t.id==='feChatInput')feSendState();if(ui.modal==='teams'&&(t.id==='feChatInput'||t.closest?.('#docForm')))teamsSync();if(ui.modal==='teams'&&t.id==='feChatInput')teamsMentionMenu();const sec=t.closest?.('.fe-md');if(ui.modal==='ideas'&&t.closest?.('#ideaForm'))ideaDirty();if(sec&&t.classList.contains('fe-area'))sec.querySelector('.fe-md-count').textContent=feCount(sec.dataset.field,t.value);});
+document.addEventListener('input',event=>{const t=event.target;if(t.classList?.contains('fe-area')||t.id==='feChatInput')autoGrow(t);if(t.id==='feChatInput')feSendState();if(ui.modal==='teams'&&(t.id==='feChatInput'||t.closest?.('#docForm')))teamsSync();if(ui.modal==='teams'&&t.id==='feChatInput')teamsMentionMenu();const sec=t.closest?.('.fe-md');if(ui.modal==='ideas'&&t.closest?.('#ideaForm'))ideaDirty();if(sec&&t.classList.contains('fe-area')){const full=ui.modal==='ideas'&&t.maxLength>0&&t.value.length>=t.maxLength;sec.querySelector('.fe-md-count').textContent=feCount(sec.dataset.field,t.value)+(full?' · LIMITE ATINGIDO':'');sec.classList.toggle('at-limit',full);}});
 document.addEventListener('focusout',event=>{const t=event.target;if(!t.classList?.contains('fe-area'))return;const sec=t.closest('.fe-md');if(!sec||sec.contains(event.relatedTarget))return;if(t.value.trim())feMdMode(sec,'view');});
 document.addEventListener('mousedown',event=>{if(event.target.closest?.('.fe-md-tools button'))event.preventDefault();});
 document.addEventListener('change',event=>{if(ui.draft?.kind==='agent'&&(event.target.id==='agentModel'||event.target.name==='effort'))syncEffortField();});

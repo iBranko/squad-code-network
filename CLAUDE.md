@@ -203,8 +203,13 @@ createdAt,updatedAt,doc}`, `doc` keys = `IDEA_FIELDS`/`ideaKeys()`, a hoisted fu
 `idea` (`ui.ideaChat`, memory `ui.ideaChats`, `/api/chats/idea/<id>`, swept when the idea is gone), modal kind `ideas` (`openIdea`),
 runs in the `incubadora` project folder with a null projectId. Its header has a model/effort selector (`ideaTuneHTML`, `ideaTune`) saved on
 CATALYST; the idea chat uses `ideaRuntime()` (global model/effort ignored), other runs keep the global override. Idea runs also get `IDEA_WEB` (only `WebSearch`/`WebFetch`, pre-approved, 300 s) on top of `CHAT_RUN`; the other chats stay tool-less. Autosave `ideaDirty`/`ideaPersist`; `.md` export `ideaExport`.
-**Criar operação** (`ideaToOperation`) goes through the `op-new` wizard carrying `ideaId`; `createOperation` then calls
-`ideaApplyToProject` (briefing, vision, scopeIn/Out, glossary) and sets `idea.projectId`. The roadmap is high level (MVP→V1→V2);
+**Criar operação** (`ideaToOperation`) with the bridge first opens the `idea-brief` modal: CATALYST rewrites the whole document as a briefing
+in one tool-less turn (`ideaDistill`, `IDEA_DISTILL_SYSTEM`: no competition, one-line monetization, MVP + next phase only, target 18k chars) and the
+person reviews it (`ideaBriefUse` refuses more than `BRIEF_MAX` = 20000, never cuts; on failure the section-built `ideaBriefFallback` is offered).
+Then the `op-new` wizard runs carrying `ideaId`; `createOperation` calls
+`ideaApplyToProject` (reviewed briefing from `ui.ideaBrief.final`, vision, scopeIn/Out, glossary), sets `idea.projectId` and saves the full
+document as `docs/brainstorm.md` in the project folder (`POST /api/project-files/brainstorm`, fixed file name, slug-validated folder).
+Without the bridge the briefing is the plain section build. The roadmap is high level (MVP→V1→V2);
 sprints and features stay with the PRD agents and the commander.
 
 **Domain model.**
