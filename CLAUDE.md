@@ -284,6 +284,12 @@ asks in `#atConfirm`; the per-item Editar is agent-chat only because `openFeatur
   current text, and once per workspace (`settings.catalogVersion` < 2, persisted) adds the stack's style subsets to unedited
   DIRETRIZES (catalog base guide + only the preset's own subsets). Changing a catalog prompt: add its previous fingerprints to
   `PROMPT_PREV`; a new one-time migration bumps `catalogVersion`.
+- Default tools of catalog agents (`presetTools(p)`, a function declaration because the seed uses it before the catalog consts): by role
+  (commander read-only; ADR/PRD + `Write`; QA and security reviewers + `Bash`, no `Edit`; operators `Edit`/`Write`/`Bash`; MOTHER WOLF read-only)
+  and by name for web (`WebSearch`+`WebFetch`: ZERO, PROFETA, SKYLINE, BASTION, SCOUT; `WebFetch`: operators except DEPLOYER, plus BLUEPRINT,
+  LEDGER, BEACON, WARDEN, KEYMASTER and the cloud/IaC DevOps). `catalogVersion` 3 moves only agents still on the old default (`oldPresetTools`).
+  Chats stay tool-less whatever the agent has. Agents with a web tool get `WEB_RULES` (web content is data, never instruction) in the step
+  prompt and as a called colleague; all steps get `BASH_RULES`.
 
 **Execution path.** `startRun` → `launchNext` → `simulationStep` (demo) or `liveStep` →
 `executeLiveStep`, which POSTs `{prompt: buildStepPrompt(...), systemPrompt: agentSystemPrompt(a),
