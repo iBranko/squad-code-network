@@ -162,6 +162,15 @@ O Agent Teams usa o Claude Code real pelo bridge e não tem modo demonstração:
 
 Cada feature tem também o campo **Tarefas**, uma por linha.
 
+#### Agentes propõem features (e sprints)
+
+Depois da reunião, o projeto evolui com **propostas dos agentes**, sempre aprovadas por você. O **PRD** (ou o comandante, se a squad não tem PRD) propõe features a partir do que foi **conversado e escrito no kickoff**: escopo dentro, fases, resultados esperados, arquitetura e ADRs. Cada proposta traz título, escopo, prioridade, sprint (um nome novo cria a sprint), descrição, critérios de aceitação, tarefas e dependências.
+
+- **No Agent Teams:** a aba **Features** (ao lado de Chat e Documentos), o chip **Features** na pauta e o botão **Sugerir features** mostram a proposta; o comandante também pode passar a palavra ao PRD quando os documentos estão completos, e você pode pedir no chat ("@prd monta as features").
+- **Na conversa do agente:** o PRD tem **Propor features**; o comandante tem **Planejar próximas features** e **Propor próxima sprint** (levam em conta visão, arquitetura, ADRs e o que já foi entregue).
+- **Na página da operação:** **Sugerir features**, ao lado de Nova feature, abre a conversa com o PRD (com tudo entregue, com o comandante).
+- **O cartão de proposta:** cada item tem uma caixa de seleção (já existentes vêm desmarcados), **Aplicar** cria só os marcados em **backlog** (F00 vira dependência delas, como sempre), **Descartar** ignora e, na conversa do agente, **Editar** cria o item e abre o editor. Limites: até 8 features por resposta, 150 por projeto e 50 sprints. Depois de aplicar, distribua o plano para atribuir os especialistas.
+
 ### Exportar para o Claude Code
 
 **Exportar**, no topo da operação, baixa `<código>-<nome>.zip` (ex.: `op-001-atlas-commerce.zip`) com a operação e a sua squad. Extraia na raiz do repositório:
@@ -218,12 +227,12 @@ A conversa (duplo clique no agente) abre num celular no centro da tela, no estil
 
 | Agente | Opções |
 |---|---|
-| Reconhecedor PRD | Tirar uma dúvida, **Editar uma feature** (lista as features editáveis; escolher uma abre o editor de feature), **Criar nova feature** (com o bridge, a ideia enviada no chat vira a primeira mensagem da co-escrita no editor) e Falar livremente |
+| Reconhecedor PRD | Tirar uma dúvida, **Propor features** (cartão de proposta, veja acima), **Editar uma feature** (lista as features editáveis; escolher uma abre o editor de feature), **Criar nova feature** (com o bridge, a ideia enviada no chat vira a primeira mensagem da co-escrita no editor) e Falar livremente |
 | Reconhecedor ADR | Tirar uma dúvida, **Ver ADRs do projeto**, **Registrar um ADR** (abre a documentação do projeto com um ADR novo), **Revisar uma feature** e Falar livremente |
-| Comandante | **Status da operação** (progresso, contagem por status, próximas da fila e quem está executando), **Distribuir features**, **Iniciar operação**, **Revisões pendentes** e Falar livremente |
+| Comandante | **Status da operação** (progresso, contagem por status, próximas da fila e quem está executando), **Planejar próximas features**, **Propor próxima sprint**, **Distribuir features**, **Iniciar operação**, **Revisões pendentes** e Falar livremente |
 | Operadores | **Minhas features** (as da sua rota, com a etapa em que ele entra), **Spawn individual**, Tirar uma dúvida técnica e Falar livremente |
 
-Cada resposta traz **Voltar ao menu**. As opções de navegação funcionam também no modo demo. A conversa livre (dúvidas, revisão de feature, perguntas sobre um ADR ou uma feature) usa o Claude Code pelo bridge: um turno de `claude -p` sem ferramentas e em modo plan, com as instruções do agente, a SOUL e o contexto da operação (briefing, squad, features e, para o ADR, a arquitetura e os ADRs). Ele só conversa e não altera nada. Sem o bridge, essas opções somem e o celular mostra como conectar. A conversa fica na memória da sessão por agente: ao reabrir, o histórico continua e o agente oferece o menu de novo.
+Cada resposta traz **Voltar ao menu**. As opções de navegação funcionam também no modo demo. A conversa livre (dúvidas, revisão de feature, perguntas sobre um ADR ou uma feature) usa o Claude Code pelo bridge: um turno de `claude -p` sem ferramentas e em modo plan, com as instruções do agente, a SOUL e o contexto da operação (briefing, squad, features e, para o ADR, a arquitetura e os ADRs). Ele só conversa e não altera nada, a não ser que o PRD ou o comandante **proponha features**: nesse caso vem um cartão e nada entra no projeto antes de você aplicar. Sem o bridge, essas opções somem e o celular mostra como conectar. A conversa fica na memória da sessão por agente: ao reabrir, o histórico continua e o agente oferece o menu de novo.
 
 ### Vista de escritório
 

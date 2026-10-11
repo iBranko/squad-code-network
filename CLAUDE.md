@@ -15,7 +15,7 @@ npm install                 # better-sqlite3 (prebuilt binary; Node >= 22)
 npm run dev                 # build index.html from src/, start the bridge, rebuild on src/ changes, restart on server.js / db.js changes
 npm start                   # node server.js → http://127.0.0.1:4317 (--port N or SQUAD_PORT; SQUAD_CLAUDE_BIN for another claude; SQUAD_PROJECTS_DIR for another projects root; SQUAD_DATA_DIR for another database folder)
 python build.py [--copy]    # full build: regenerates src/avatars.js (needs Pillow), writes index.html (--copy: also ../squad-code-network.html)
-npm test                    # bridge tests: node --test tests/bridge.test.mjs (uses tests/fake-claude.mjs, no API cost)
+npm test                    # bridge tests + proposal core tests: node --test tests/bridge.test.mjs tests/proposal.test.mjs (fake-claude, no API cost; proposal.test.mjs runs parseFeatureProposal/applyFeatureProposal extracted from src/app.js with stubs)
 node --test --test-name-pattern "<test name>" tests/bridge.test.mjs   # single bridge test
 node --check src/app.js     # quick syntax check after edits
 python tests/ui_test.py     # optional UI tests (needs Playwright + Chromium; CHROMIUM_EXECUTABLE, SQUAD_PREVIEW_DIR)
@@ -195,6 +195,23 @@ report (framed as "[Subagent hand-back] ... The report follows:" with indented l
   `preventDefault`ed inside `<summary>`), all refreshed by `refreshDocAgents` when the squad changes. It starts from the page
   form's current values; "Salvar no projeto" (`#docForm` → `saveProjectDoc`) writes back into `#projectForm`, calls `saveProject`
   (a new operation only fills the form: "Aplicar ao formulário") and opens and highlights every page place.
+
+**Feature proposals** (how agents evolve the project after the kickoff): the PRD (commander when there is no PRD seat) proposes
+features, and sprints, in a `"features"` key of the reply's ```json block; nothing reaches the project before the person applies it.
+`parseFeatureProposal(data)` (function declaration, near `applyDocAdrs`) normalizes it (max `PROPOSAL_MAX` 8 per reply, titles 120,
+scope from `SCOPES` except `setup`, P0/P1/P2, duplicates by `featNorm` title come unchecked with `dup`) into `m.proposal`
+`{items, sprints, state:'pending'|'applied'|'discarded', created}` **inside the chat message**, so `chatSnapshot`/the database keep it.
+`proposalHTML(m)` (hooked in `feMsgHTML`) is the card (`.fe-proposal`; `proposal-toggle|apply|discard|edit|open` in the dispatcher →
+`proposalAct`, `proposalRefresh` redraws every copy by `data-proposal`); `applyFeatureProposal(m)` (`guardMutation`, 150 features, sprint
+by normalized name, "Sprint 2" = "Sprint 02", new ones via `createSprint` up to 50, no sprint → the `currentSprint` at that moment, `F<n>`
+continues from the highest key, deps by key/title/other picked item, dropped if they would make a cycle, then `ensureSetup`) creates them
+in `backlog`. Sources: Agent Teams (`docFeaturesOn(a,c)`: the PRD's turn gets the `features` key in `docCoWriteSystem`, the last 60 messages
+in `docCoWritePrompt`, and `chatApply` reads it; a **Features** tab `#atFeatures` (`teamsFeaturesSync`, counter `#atFeatCount`), the
+agenda chip `features` (`teamsAgenda(true)`, the docs counter excludes it), `teamsSuggest` = `@PRD` message; leaving with a pending proposal
+asks in `#atConfirm`; the per-item Editar is agent-chat only because `openFeatureEditor` would replace the Teams modal), the agent chat
+(`agentChatSystem(a)` lifts the "no changes" rule for commander/PRD; menus `propose`, `plan-next`, `propose-sprint`;
+`agentChatEvolveContext` adds vision, glossary, architecture, ADRs and delivered outputs) and the operation page (`features-suggest` →
+`suggestFeatures`: PRD chat, commander once every feature is done). Execution agents still never touch the workspace.
 
 **Domain model.**
 - Positions (`a.hex`, `a.desk`) are unique per squad, not per workspace: `takenHexes`/`takenDesks` only look at `squad()`
